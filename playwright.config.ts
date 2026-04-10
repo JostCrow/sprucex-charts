@@ -7,7 +7,8 @@ export default defineConfig({
     headless: true,
   },
   webServer: {
-    command: "pnpm build && pnpm --filter @sprucex-charts/docs preview --host 127.0.0.1 --port 4173",
+    command:
+      "npm run build && npm run preview --workspace=@sprucex-charts/docs -- --host 127.0.0.1 --port 4173",
     port: 4173,
     reuseExistingServer: false,
     timeout: 120_000,
