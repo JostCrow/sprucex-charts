@@ -1,0 +1,43 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  {
+    "label": "Visitors",
+    "value": 5000
+  },
+  {
+    "label": "Qualified",
+    "value": 2800
+  },
+  {
+    "label": "Demo",
+    "value": 1480
+  },
+  {
+    "label": "Proposal",
+    "value": 860
+  },
+  {
+    "label": "Won",
+    "value": 430
+  }
+];
+const options = {
+  "title": "Acquisition Funnel",
+  "series": [
+    {
+      "id": "funnel",
+      "name": "Funnel",
+      "xKey": "label",
+      "valueKey": "value"
+    }
+  ]
+};
+---
+
+<StaticChartExample
+  chartType="funnel"
+  data={data}
+  options={options}
+/>

@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import TreemapContent from "../../components/page-content/treemap.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("treemap");
+---
+
+<DocsPageShell page={page}>
+  <TreemapContent />
+</DocsPageShell>

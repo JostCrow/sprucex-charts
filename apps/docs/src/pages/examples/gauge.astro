@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import GaugeContent from "../../components/page-content/gauge.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("gauge");
+---
+
+<DocsPageShell page={page}>
+  <GaugeContent />
+</DocsPageShell>

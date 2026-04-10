@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import BoxPlotContent from "../../components/page-content/box-plot.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("box-plot");
+---
+
+<DocsPageShell page={page}>
+  <BoxPlotContent />
+</DocsPageShell>

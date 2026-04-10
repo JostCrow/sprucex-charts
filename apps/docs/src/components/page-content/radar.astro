@@ -1,0 +1,43 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  {
+    "label": "Speed",
+    "value": 78
+  },
+  {
+    "label": "Clarity",
+    "value": 92
+  },
+  {
+    "label": "Coverage",
+    "value": 84
+  },
+  {
+    "label": "Stability",
+    "value": 73
+  },
+  {
+    "label": "Accessibility",
+    "value": 88
+  }
+];
+const options = {
+  "title": "Capability Radar",
+  "series": [
+    {
+      "id": "radar",
+      "name": "Capability",
+      "xKey": "label",
+      "yKey": "value"
+    }
+  ]
+};
+---
+
+<StaticChartExample
+  chartType="radar"
+  data={data}
+  options={options}
+/>

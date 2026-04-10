@@ -1,0 +1,39 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  { id: "752", marker: "752", value: 88 },
+  { id: "840", marker: "840", value: 54 },
+  { id: "276", marker: "276", value: 97 },
+  { id: "356", marker: "356", value: 73 },
+  { id: "076", marker: "076", value: 62 },
+  { id: "036", marker: "036", value: 49 },
+  { id: "710", marker: "710", value: 67 },
+  { id: "392", marker: "392", value: 91 },
+  { id: "124", marker: "124", value: 58 },
+  { id: "484", marker: "484", value: 45 },
+];
+
+const options = {
+  title: "Global Performance",
+  subtitle: "Built-in map source rendering with value-driven fills.",
+  series: [
+    {
+      id: "countries",
+      name: "Countries",
+      xKey: "id",
+      valueKey: "value",
+      color: "#2667ff",
+    },
+  ],
+  map: {
+    source: "world",
+    projection: "equal-earth",
+    valueKey: "value",
+    pointKey: "marker",
+    pointRadius: 7,
+  },
+};
+---
+
+<StaticChartExample chartType="map" data={data} options={options} />

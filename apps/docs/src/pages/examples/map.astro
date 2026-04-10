@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import MapContent from "../../components/page-content/map.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("map");
+---
+
+<DocsPageShell page={page}>
+  <MapContent />
+</DocsPageShell>

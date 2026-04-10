@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../components/DocsPageShell.astro";
+import DataStructuresContent from "../components/page-content/data-structures.astro";
+import { requireDocPage } from "../data/docs";
+
+const page = requireDocPage("data-structures");
+---
+
+<DocsPageShell page={page}>
+  <DataStructuresContent />
+</DocsPageShell>

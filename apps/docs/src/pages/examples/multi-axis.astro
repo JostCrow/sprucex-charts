@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import MultiAxisContent from "../../components/page-content/multi-axis.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("multi-axis");
+---
+
+<DocsPageShell page={page}>
+  <MultiAxisContent />
+</DocsPageShell>

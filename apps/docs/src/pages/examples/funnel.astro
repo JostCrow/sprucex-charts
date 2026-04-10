@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import FunnelContent from "../../components/page-content/funnel.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("funnel");
+---
+
+<DocsPageShell page={page}>
+  <FunnelContent />
+</DocsPageShell>

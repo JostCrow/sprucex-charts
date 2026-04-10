@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import HistogramContent from "../../components/page-content/histogram.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("histogram");
+---
+
+<DocsPageShell page={page}>
+  <HistogramContent />
+</DocsPageShell>

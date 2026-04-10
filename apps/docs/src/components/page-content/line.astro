@@ -1,0 +1,77 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  {
+    month: "Jan",
+    revenue: 34,
+    pipeline: 25,
+    margin: 15,
+  },
+  {
+    month: "Feb",
+    revenue: 49,
+    pipeline: 36,
+    margin: 19,
+  },
+  {
+    month: "Mar",
+    revenue: 63,
+    pipeline: 34,
+    margin: 23,
+  },
+  {
+    month: "Apr",
+    revenue: 53,
+    pipeline: 45,
+    margin: 27,
+  },
+  {
+    month: "May",
+    revenue: 68,
+    pipeline: 43,
+    margin: 24,
+  },
+  {
+    month: "Jun",
+    revenue: 82,
+    pipeline: 54,
+    margin: 28,
+  },
+  {
+    month: "Jul",
+    revenue: 72,
+    pipeline: 52,
+    margin: 32,
+  },
+  {
+    month: "Aug",
+    revenue: 86,
+    pipeline: 63,
+    margin: 36,
+  },
+];
+
+const options = {
+  title: "Line Trend",
+  subtitle: "Single-series line chart over shared category steps.",
+  series: [
+    {
+      id: "revenue",
+      name: "Revenue",
+      xKey: "month",
+      yKey: "revenue",
+    },
+  ],
+  axes: {
+    x: {
+      scaleType: "category",
+    },
+    y: {
+      grid: true,
+    },
+  },
+};
+---
+
+<StaticChartExample chartType="line" data={data} options={options} />

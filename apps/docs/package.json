@@ -1,0 +1,25 @@
+{
+  "name": "@sprucex-charts/docs",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "prepare:vendor": "cp ../../packages/sprucex-charts/dist/sprucex-charts.js public/vendor/sprucex-charts.js",
+    "dev": "pnpm run prepare:vendor && astro dev",
+    "build": "pnpm run prepare:vendor && astro build",
+    "preview": "pnpm run prepare:vendor && astro preview",
+    "test": "vitest run",
+    "lint": "pnpm --filter @sprucex-charts/core build && pnpm run prepare:vendor && tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sprucex-charts/core": "workspace:*",
+    "@tailwindcss/vite": "^4.2.2",
+    "basecoat-css": "^0.3.11",
+    "sprucex": "^1.0.0",
+    "tailwindcss": "^4.2.2",
+    "@tailwindcss/cli": "^4.1.18"
+  },
+  "devDependencies": {
+    "astro": "^5.18.1"
+  }
+}

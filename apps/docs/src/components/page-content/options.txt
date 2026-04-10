@@ -1,0 +1,66 @@
+options to implement:
+1. sx-chart-options.series[].markerShape
+2. sx-chart-options.series[].barWidth
+3. sx-chart-options.series[].labels
+4. sx-chart-options.series[].format
+5. sx-chart-options.axes.x.tickCount
+6. sx-chart-options.axes.x.tickValues
+7. sx-chart-options.axes.x.tickFormat
+8. sx-chart-options.axes.x.labelRotation
+9. sx-chart-options.axes.x.title
+10.  sx-chart-options.axes.x.grid
+11.  sx-chart-options.axes.y.scaleType
+12. sx-chart-options.axes.x.tickCount
+13. sx-chart-options.axes.y.tickValues
+14. sx-chart-options.axes.y.tickFormat
+15. sx-chart-options.axes.y.labelRotation
+16. sx-chart-options.axes.y.title
+17. sx-chart-options.legend.position
+18.  sx-chart-options.legend.layout
+19. sx-chart-options.legend.alignment
+20.  sx-chart-options.legend.inside
+21. sx-chart-options.legend.itemShape
+22. sx-chart-options.legend.itemSpacing
+23.  sx-chart-options.legend.labelFormatter
+24. sx-chart-options.legend.scroll
+25.  sx-chart-options.legend.pagination
+26. sx-chart-options.tooltip.enabled
+27. sx-chart-options.tooltip.formatter
+28. sx-chart-options.interactions.brush
+29. sx-chart-options.interactions.zoom
+30. sx-chart-options.interactions.pan
+31. sx-chart-options.interactions.resetZoom
+32. sx-chart-options.interactions.drilldown
+33.  sx-chart-options.map.pointKey
+34.  sx-chart-options.map.pointRadius
+
+options to change:
+1. sx-chart-options.series[].axis, remove the x value if it is not implemented
+2. sx-chart-options.padding make all the padding on every side the same. 40px
+
+options to remove:
+1. sx-chart-options.series[].stack
+2. sx-chart-options.axes.x.position Just use the defaults that we already have.
+3. sx-chart-options.axes.x.tickInterval
+4.  sx-chart-options.axes.x.reverse
+5.  sx-chart-options.axes.x.domainPadding
+6.  sx-chart-options.axes.y.position
+7.  sx-chart-options.axes.y.tickInterval
+8.  sx-chart-options.axes.y.reverse
+9.  sx-chart-options.axes.y.domainPadding
+10. sx-chart-options.tooltip.followCursor
+11. sx-chart-options.tooltip.html
+12. sx-chart-options.tooltip.rowSort
+13. sx-chart-options.interactions.hover
+14. sx-chart-options.interactions.select
+15. sx-chart-options.interactions.highlight
+16. sx-chart-options.interactions.crosshair
+17. sx-chart-options.interactions.touch
+18. sx-chart-options.interactions.responsive
+19. sx-chart-options.annotations[]
+20. sx-chart-options.theme (the css variables do the styling)
+21. sx-chart-options.accessibility.description
+22. sx-chart-options.accessibility.keyboard
+23. sx-chart-options.export (not working beter to remove fully)
+24. sx-chart-options.background
+25. sx-chart-options.map.labelKey

@@ -1,0 +1,13 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import AreaContent from "../../components/page-content/area.astro";
+import SparkContent from "../../components/page-content/spark.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("area");
+---
+
+<DocsPageShell page={page}>
+  <AreaContent />
+  <SparkContent />
+</DocsPageShell>

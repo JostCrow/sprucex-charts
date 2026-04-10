@@ -1,0 +1,42 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  { x: "2025-02-01", open: 100, high: 106, low: 95, close: 100 },
+  { x: "2025-02-02", open: 104, high: 114, low: 98, close: 107 },
+  { x: "2025-02-03", open: 107, high: 120, low: 102, close: 112 },
+  { x: "2025-02-04", open: 110, high: 122, low: 104, close: 116 },
+  { x: "2025-02-05", open: 113, high: 125, low: 108, close: 118 },
+  { x: "2025-02-06", open: 114, high: 126, low: 108, close: 118 },
+  { x: "2025-02-07", open: 114, high: 121, low: 109, close: 115 },
+  { x: "2025-02-08", open: 114, high: 121, low: 106, close: 112 },
+  { x: "2025-02-09", open: 113, high: 121, low: 104, close: 109 },
+  { x: "2025-02-10", open: 112, high: 118, low: 100, close: 106 },
+];
+
+const options = {
+  title: "Session Range",
+  subtitle: "Open-high-low-close ticks for compact financial views.",
+  series: [
+    {
+      id: "price",
+      name: "Price",
+      xKey: "x",
+      openKey: "open",
+      highKey: "high",
+      lowKey: "low",
+      closeKey: "close",
+    },
+  ],
+  axes: {
+    x: {
+      scaleType: "category",
+    },
+    y: {
+      grid: true,
+    },
+  },
+};
+---
+
+<StaticChartExample chartType="ohlc" data={data} options={options} />

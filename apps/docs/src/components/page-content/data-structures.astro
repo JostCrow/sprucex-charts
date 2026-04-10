@@ -1,0 +1,303 @@
+---
+const singleSeriesMarkup = String.raw`<div
+  sx-data="{
+    revenueData: [
+      { month: 'Jan', revenue: 34 },
+      { month: 'Feb', revenue: 49 },
+      { month: 'Mar', revenue: 63 }
+    ],
+    revenueOptions: {
+      series: [
+        {
+          id: 'revenue',
+          name: 'Revenue',
+          xKey: 'month',
+          yKey: 'revenue'
+        }
+      ],
+      axes: {
+        x: { scaleType: 'category' },
+        y: { grid: true }
+      }
+    }
+  }"
+>
+  <div
+    sx-chart="revenueData"
+    sx-chart-type="line"
+    sx-chart-options="revenueOptions"
+  ></div>
+</div>`;
+
+const multiSeriesData = String.raw`[
+  { month: 'Jan', revenue: 34, pipeline: 25, margin: 15 },
+  { month: 'Feb', revenue: 49, pipeline: 36, margin: 19 },
+  { month: 'Mar', revenue: 63, pipeline: 34, margin: 23 },
+  { month: 'Apr', revenue: 53, pipeline: 45, margin: 27 }
+]`;
+
+const multiSeriesOptions = String.raw`{
+  series: [
+    {
+      id: 'revenue',
+      name: 'Revenue',
+      xKey: 'month',
+      yKey: 'revenue'
+    },
+    {
+      id: 'pipeline',
+      name: 'Pipeline',
+      xKey: 'month',
+      yKey: 'pipeline'
+    },
+    {
+      id: 'margin',
+      name: 'Margin',
+      xKey: 'month',
+      yKey: 'margin'
+    }
+  ],
+  axes: {
+    x: { scaleType: 'category' },
+    y: { grid: true }
+  }
+}`;
+
+const mixedSeriesOptions = String.raw`{
+  series: [
+    {
+      id: 'revenue',
+      type: 'bar',
+      name: 'Revenue',
+      xKey: 'month',
+      yKey: 'revenue'
+    },
+    {
+      id: 'margin',
+      type: 'line',
+      name: 'Margin',
+      xKey: 'month',
+      yKey: 'margin',
+      axis: 'y2'
+    }
+  ],
+  axes: {
+    x: { scaleType: 'category' },
+    y: { grid: true },
+    y2: { grid: false }
+  }
+}`;
+
+const avoidShape = String.raw`[
+  {
+    series: 'Revenue',
+    values: [34, 49, 63, 53]
+  },
+  {
+    series: 'Pipeline',
+    values: [25, 36, 34, 45]
+  }
+]`;
+
+const chartFamilies = [
+  {
+    family: "Line, area, bar, stacked-bar, stacked-area",
+    keys: "xKey + yKey",
+    note: "Use one shared row array. Add more series entries for more lines or bars.",
+  },
+  {
+    family: "Pie, polar, gauge, treemap, funnel, map",
+    keys: "xKey + valueKey",
+    note: "These read a single numeric value per item, so valueKey is the important field.",
+  },
+  {
+    family: "Scatter",
+    keys: "xKey + yKey",
+    note: "Both fields should be numeric or date-like.",
+  },
+  {
+    family: "Bubble",
+    keys: "xKey + yKey + sizeKey",
+    note: "sizeKey controls the bubble size channel.",
+  },
+  {
+    family: "Candlestick, OHLC",
+    keys: "xKey + openKey + highKey + lowKey + closeKey",
+    note: "Each row represents one time or category step with all price values.",
+  },
+  {
+    family: "Sankey",
+    keys: "series.nodes + series.links",
+    note: "This is the main exception. The flow graph lives on the series config instead of sx-chart rows.",
+  },
+];
+---
+
+<section class="grid gap-6">
+  <div class="grid gap-6 md:grid-cols-3">
+    <div class="rounded-xl border border-border bg-card p-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">1. Data</p>
+      <h2 class="mt-2 text-lg font-semibold">Put your dataset in <code>sx-chart</code></h2>
+      <p class="mt-2 text-sm leading-6 text-muted-foreground">
+        For almost every chart, <code>sx-chart</code> should resolve to an array of objects. Each
+        object is one row in the dataset.
+      </p>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">2. Type</p>
+      <h2 class="mt-2 text-lg font-semibold">Pick the chart family with <code>sx-chart-type</code></h2>
+      <p class="mt-2 text-sm leading-6 text-muted-foreground">
+        The chart type decides whether the series should read <code>yKey</code>, <code>valueKey</code>,
+        or one of the chart-specific keys.
+      </p>
+    </div>
+    <div class="rounded-xl border border-border bg-card p-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">3. Series</p>
+      <h2 class="mt-2 text-lg font-semibold">Point every series at the right keys</h2>
+      <p class="mt-2 text-sm leading-6 text-muted-foreground">
+        <code>sx-chart-options.series[]</code> tells the chart which fields to read from each row and
+        how many series should be rendered.
+      </p>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-border bg-card p-8 text-center">
+    <div class="mx-auto grid max-w-3xl gap-4">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Core Rule</p>
+      <h2 class="text-2xl font-semibold md:text-3xl">Use row-shaped objects, not separate arrays per series</h2>
+      <p class="text-sm leading-6 text-muted-foreground md:text-base md:leading-7">
+        The chart reads one dataset and then each series pulls values from that shared dataset. If you
+        want multiple series, keep them in the same row objects and give each series its own
+        <code>id</code> plus the correct value key.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+    <div class="rounded-xl border border-border bg-card p-6">
+      <div class="grid gap-3">
+        <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Single Series</p>
+        <h2 class="text-xl font-semibold">Bind one dataset and one series</h2>
+        <p class="text-sm leading-6 text-muted-foreground">
+          This is the normal setup for a basic line, area, or bar chart. The data lives in
+          <code>sx-data</code>, <code>sx-chart</code> points at the array, and the series maps
+          <code>month</code> to the x-axis and <code>revenue</code> to the y-axis.
+        </p>
+      </div>
+      <pre class="mt-6 overflow-x-auto rounded-xl bg-stone-950 p-4 text-sm leading-6 text-stone-50"><code>{singleSeriesMarkup}</code></pre>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card p-6">
+      <div class="grid gap-3">
+        <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Important</p>
+        <h2 class="text-xl font-semibold">What each row means</h2>
+      </div>
+      <ul class="mt-6 list-disc space-y-3 pl-5 text-sm leading-6 text-muted-foreground">
+        <li>Each object should represent one category, date, bucket, or observation.</li>
+        <li>Keep the key names stable across the whole dataset.</li>
+        <li>Use <code>xKey</code> for the shared category, date, or numeric x value.</li>
+        <li>Use <code>yKey</code> for cartesian value series such as line and bar charts.</li>
+        <li>Use <code>valueKey</code> for single-value families such as pie, funnel, gauge, treemap, and map.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-6">
+      <div class="grid gap-3">
+        <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Multiple Series</p>
+        <h2 class="text-xl font-semibold">Keep one shared dataset</h2>
+        <p class="text-sm leading-6 text-muted-foreground">
+          Multiple series does not mean multiple data arrays. It means multiple entries inside
+          <code>series</code> that all read from the same row-shaped dataset.
+        </p>
+      </div>
+      <pre class="mt-6 overflow-x-auto rounded-xl bg-stone-950 p-4 text-sm leading-6 text-stone-50"><code>{multiSeriesData}</code></pre>
+      <pre class="mt-4 overflow-x-auto rounded-xl bg-stone-950 p-4 text-sm leading-6 text-stone-50"><code>{multiSeriesOptions}</code></pre>
+    </div>
+
+    <div class="rounded-xl border border-destructive/20 bg-destructive/5 p-6">
+      <div class="grid gap-3">
+        <p class="text-xs font-semibold uppercase tracking-[0.05em] text-destructive">Do Not Do This</p>
+        <h2 class="text-xl font-semibold">Separate value arrays break the expected shape</h2>
+        <p class="text-sm leading-6 text-muted-foreground">
+          This shape looks intuitive, but it is not what the chart expects. There is no shared row to
+          line up categories and values across series.
+        </p>
+      </div>
+      <pre class="mt-6 overflow-x-auto rounded-xl bg-stone-950 p-4 text-sm leading-6 text-stone-50 border border-destructive/20"><code>{avoidShape}</code></pre>
+      <ul class="mt-6 list-disc space-y-3 pl-5 text-sm leading-6 text-muted-foreground">
+        <li>Use one row per month, day, region, or point.</li>
+        <li>Store each metric as another field on that row.</li>
+        <li>Create one series config per metric you want to render.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-border bg-card p-6">
+    <div class="grid gap-3">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Mixed Layouts</p>
+      <h2 class="text-xl font-semibold">Combo and multi-axis charts still use the same rows</h2>
+      <p class="text-sm leading-6 text-muted-foreground">
+        For mixed charts, the data shape stays the same. What changes is the per-series
+        <code>type</code> and sometimes the per-series <code>axis</code>.
+      </p>
+    </div>
+    <pre class="mt-6 overflow-x-auto rounded-xl bg-stone-950 p-4 text-sm leading-6 text-stone-50"><code>{mixedSeriesOptions}</code></pre>
+  </div>
+
+  <div class="rounded-xl border border-border bg-card p-6">
+    <div class="grid gap-3">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Key Guide</p>
+      <h2 class="text-xl font-semibold">Which keys each chart family usually needs</h2>
+    </div>
+    <div class="mt-6 overflow-x-auto">
+      <table class="w-full text-left text-sm text-muted-foreground">
+        <thead class="border-b border-border text-foreground">
+          <tr>
+            <th class="pb-3 font-semibold">Chart family</th>
+            <th class="pb-3 font-semibold">Typical keys</th>
+            <th class="pb-3 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-border">
+          {chartFamilies.map((entry) => (
+            <tr>
+              <td class="py-4 pr-4 align-top font-medium text-foreground">{entry.family}</td>
+              <td class="py-4 pr-4 align-top">
+                <code class="rounded bg-muted px-1.5 py-0.5 text-xs text-foreground">{entry.keys}</code>
+              </td>
+              <td class="py-4 align-top leading-6">{entry.note}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid gap-6 md:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-6">
+      <div class="grid gap-3">
+        <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Sankey</p>
+        <h2 class="text-xl font-semibold">Use <code>nodes</code> and <code>links</code> on the series</h2>
+        <p class="text-sm leading-6 text-muted-foreground">
+          Sankey is the main exception to the row-based rule. The graph structure lives on
+          <code>sx-chart-options.series[0]</code> as <code>nodes</code> and <code>links</code>, not in
+          the <code>sx-chart</code> array.
+        </p>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card p-6">
+      <div class="grid gap-3">
+        <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Map</p>
+        <h2 class="text-xl font-semibold">Split geometry from values</h2>
+        <p class="text-sm leading-6 text-muted-foreground">
+          For maps, geographic features belong in <code>sx-chart-options.map.features</code>. Your
+          numeric dataset still comes through <code>sx-chart</code>, usually with an id field on
+          <code>xKey</code> and a numeric field on <code>valueKey</code>.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

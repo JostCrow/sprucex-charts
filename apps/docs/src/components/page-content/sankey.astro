@@ -1,0 +1,80 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [];
+const options = {
+  "title": "Pipeline Flow",
+  "series": [
+    {
+      "id": "flow",
+      "name": "Flow",
+      "color": "#2667ff",
+      "nodes": [
+        {
+          "id": "Visitors",
+          "name": "Visitors",
+          "value": 5000
+        },
+        {
+          "id": "Qualified",
+          "name": "Qualified",
+          "value": 2800
+        },
+        {
+          "id": "Demo",
+          "name": "Demo",
+          "value": 1480
+        },
+        {
+          "id": "Proposal",
+          "name": "Proposal",
+          "value": 860
+        },
+        {
+          "id": "Won",
+          "name": "Won",
+          "value": 430
+        },
+        {
+          "id": "Lost",
+          "name": "Lost",
+          "value": 430
+        }
+      ],
+      "links": [
+        {
+          "source": "Visitors",
+          "target": "Qualified",
+          "value": 2800
+        },
+        {
+          "source": "Qualified",
+          "target": "Demo",
+          "value": 1480
+        },
+        {
+          "source": "Demo",
+          "target": "Proposal",
+          "value": 860
+        },
+        {
+          "source": "Proposal",
+          "target": "Won",
+          "value": 430
+        },
+        {
+          "source": "Proposal",
+          "target": "Lost",
+          "value": 430
+        }
+      ]
+    }
+  ]
+};
+---
+
+<StaticChartExample
+  chartType="sankey"
+  data={data}
+  options={options}
+/>

@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import CandlestickContent from "../../components/page-content/candlestick.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("candlestick");
+---
+
+<DocsPageShell page={page}>
+  <CandlestickContent />
+</DocsPageShell>

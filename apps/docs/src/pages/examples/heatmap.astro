@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import HeatmapContent from "../../components/page-content/heatmap.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("heatmap");
+---
+
+<DocsPageShell page={page}>
+  <HeatmapContent />
+</DocsPageShell>

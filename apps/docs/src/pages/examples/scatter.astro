@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import ScatterContent from "../../components/page-content/scatter.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("scatter");
+---
+
+<DocsPageShell page={page}>
+  <ScatterContent />
+</DocsPageShell>

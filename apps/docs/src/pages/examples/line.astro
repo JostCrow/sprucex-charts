@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import LineContent from "../../components/page-content/line.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("line");
+---
+
+<DocsPageShell page={page}>
+  <LineContent />
+</DocsPageShell>

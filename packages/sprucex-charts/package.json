@@ -1,0 +1,33 @@
+{
+  "name": "@sprucex-charts/core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./lib/index.cjs",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "require": "./lib/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "lib"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --global-name SpruceXCharts --out-dir lib && tsup src/index.ts --format iife --global-name SpruceXCharts --out-dir dist && node -e \"const fs=require('fs'); if (fs.existsSync('dist/index.global.js')) fs.renameSync('dist/index.global.js','dist/sprucex-charts.js');\" && tsup src/index.ts --format iife --minify --global-name SpruceXCharts --out-dir dist && node -e \"const fs=require('fs'); if (fs.existsSync('dist/index.global.js')) fs.renameSync('dist/index.global.js','dist/sprucex-charts.min.js');\"",
+    "dev": "tsup src/index.ts --format esm --watch --dts false",
+    "test": "vitest run src/**/*.test.ts",
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1",
+    "world-atlas": "^2.0.2"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5"
+  }
+}

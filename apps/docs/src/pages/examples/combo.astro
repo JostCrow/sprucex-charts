@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import ComboContent from "../../components/page-content/combo.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("combo");
+---
+
+<DocsPageShell page={page}>
+  <ComboContent />
+</DocsPageShell>

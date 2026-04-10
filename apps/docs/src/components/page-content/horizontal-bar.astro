@@ -1,0 +1,37 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  { region: "Nordics", pipeline: 28 },
+  { region: "Benelux", pipeline: 40 },
+  { region: "DACH", pipeline: 38 },
+  { region: "France", pipeline: 50 },
+  { region: "Spain", pipeline: 48 },
+  { region: "UK", pipeline: 60 },
+  { region: "Italy", pipeline: 58 },
+  { region: "US", pipeline: 70 },
+];
+
+const options = {
+  title: "Regional Comparison",
+  subtitle: "Horizontal bars help compare ranked categories.",
+  series: [
+    {
+      id: "pipeline",
+      name: "Pipeline",
+      xKey: "region",
+      yKey: "pipeline",
+    },
+  ],
+  axes: {
+    x: {
+      scaleType: "category",
+    },
+    y: {
+      grid: true,
+    },
+  },
+};
+---
+
+<StaticChartExample chartType="horizontal-bar" data={data} options={options} />

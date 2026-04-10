@@ -1,0 +1,107 @@
+<section class="grid gap-6 md:grid-cols-2">
+  <div class="rounded-xl border border-border bg-card p-6 transition-colors hover:-translate-y-0.5 hover:border-primary">
+    <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Declarative</p>
+    <h2 class="mt-2 text-lg font-semibold">No imperative code</h2>
+    <p class="mt-2 text-sm leading-6 text-muted-foreground">
+      No refs. No manually attaching event listeners. Just HTML attributes and
+      SpruceX's reactivity doing the heavy lifting.
+    </p>
+  </div>
+  <div class="rounded-xl border border-border bg-card p-6 transition-colors hover:-translate-y-0.5 hover:border-primary">
+    <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Lightweight</p>
+    <h2 class="mt-2 text-lg font-semibold">Ship less, do more</h2>
+    <p class="mt-2 text-sm leading-6 text-muted-foreground">
+      Tree-shakeable modules mean you import exactly what you use. A basic bar chart adds
+      roughly 12kb to your bundle. That's it.
+    </p>
+  </div>
+  <div class="rounded-xl border border-border bg-card p-6 transition-colors hover:-translate-y-0.5 hover:border-primary">
+    <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Inclusive</p>
+    <h2 class="mt-2 text-lg font-semibold">Accessibility isn't optional</h2>
+    <p class="mt-2 text-sm leading-6 text-muted-foreground">
+      Every chart includes ARIA labels, keyboard navigation, and high-contrast themes. Built
+      to WCAG AA from day one—no retrofitting required.
+    </p>
+  </div>
+  <div class="rounded-xl border border-border bg-card p-6 transition-colors hover:-translate-y-0.5 hover:border-primary">
+    <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Quality</p>
+    <h2 class="mt-2 text-lg font-semibold">Print-quality vectors</h2>
+    <p class="mt-2 text-sm leading-6 text-muted-foreground">
+      SVG means crisp lines at any zoom. Export to SVG for reports, PNG for sharing, or
+      CSV so your users can work with the raw data.
+    </p>
+  </div>
+</section>
+
+<section class="mt-12 grid gap-6 lg:grid-cols-2">
+  <div class="rounded-xl border border-border bg-card p-6">
+    <div class="grid gap-3">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">The Good</p>
+      <h2 class="text-xl font-semibold">Use SpruceX Charts if…</h2>
+    </div>
+    <ul class="mt-4 list-disc space-y-3 pl-5 text-sm leading-6 text-muted-foreground">
+      <li>You're building a SpruceX app and want charts without writing JS.</li>
+      <li>You need clean, professional visualizations without fighting an API.</li>
+      <li>Bundle size matters to you.</li>
+      <li>Accessibility is a requirement, not an afterthought.</li>
+      <li>You want zoom, pan, tooltips, and export out of the box.</li>
+      <li>You're building dashboards, reports, or admin interfaces.</li>
+    </ul>
+  </div>
+
+  <div class="rounded-xl border border-border bg-card p-6">
+    <div class="grid gap-3">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-destructive">The Bad</p>
+      <h2 class="text-xl font-semibold">Look elsewhere if…</h2>
+    </div>
+    <ul class="mt-4 list-disc space-y-3 pl-5 text-sm leading-6 text-muted-foreground">
+      <li>You need to render 10,000+ points in real-time (try Canvas/WebGL).</li>
+      <li>You're not using SpruceX (the declarative syntax depends on it).</li>
+      <li>You need chart types we don't support (chord, force-directed, etc.).</li>
+      <li>You need to support IE11 or browsers without SVG support.</li>
+      <li>You want server-rendered chart images (use a dedicated tool for that).</li>
+    </ul>
+  </div>
+</section>
+
+<section class="mt-12 flex flex-wrap justify-center gap-8 rounded-xl border border-border bg-card p-8">
+  <div class="text-center">
+    <span class="block text-3xl font-bold text-primary">20+</span>
+    <span class="mt-1 block text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">Chart Types</span>
+  </div>
+  <div class="text-center">
+    <span class="block text-3xl font-bold text-primary">~12kb</span>
+    <span class="mt-1 block text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">Minified Core</span>
+  </div>
+  <div class="text-center">
+    <span class="block text-3xl font-bold text-primary">WCAG</span>
+    <span class="mt-1 block text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">AA Compliant</span>
+  </div>
+  <div class="text-center">
+    <span class="block text-3xl font-bold text-primary">TS</span>
+    <span class="mt-1 block text-xs font-semibold uppercase tracking-[0.05em] text-muted-foreground">Strict Types</span>
+  </div>
+</section>
+
+<footer class="mt-12">
+  <div class="mb-6 grid gap-3">
+    <h2 class="text-xl font-semibold">Where to next?</h2>
+  </div>
+  <div class="grid gap-6 md:grid-cols-3">
+    <a href="/documentation" class="group rounded-xl border border-border bg-card p-6 no-underline transition-colors hover:border-primary hover:bg-primary/5">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Learn</p>
+      <h3 class="mt-2 text-lg font-semibold text-foreground transition-colors group-hover:text-primary">Documentation &rarr;</h3>
+      <p class="mt-2 text-sm leading-6 text-muted-foreground">Installation, configuration, and API reference.</p>
+    </a>
+    <a href="/examples/line" class="group rounded-xl border border-border bg-card p-6 no-underline transition-colors hover:border-primary hover:bg-primary/5">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">See</p>
+      <h3 class="mt-2 text-lg font-semibold text-foreground transition-colors group-hover:text-primary">Examples &rarr;</h3>
+      <p class="mt-2 text-sm leading-6 text-muted-foreground">Live demos of every chart type.</p>
+    </a>
+    <a href="/data-structures" class="group rounded-xl border border-border bg-card p-6 no-underline transition-colors hover:border-primary hover:bg-primary/5">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Build</p>
+      <h3 class="mt-2 text-lg font-semibold text-foreground transition-colors group-hover:text-primary">Data Structures &rarr;</h3>
+      <p class="mt-2 text-sm leading-6 text-muted-foreground">How to shape and bind your data.</p>
+    </a>
+  </div>
+</footer>

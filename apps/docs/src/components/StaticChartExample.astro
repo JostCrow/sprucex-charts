@@ -1,0 +1,53 @@
+---
+interface Props {
+  chartType: string;
+  data: unknown;
+  minHeightClass?: string;
+  options?: Record<string, unknown>;
+}
+
+const {
+  chartType,
+  data,
+  minHeightClass = "min-h-112",
+  options = {},
+} = Astro.props;
+
+const normalizedOptions = {
+  ...options,
+  series: Array.isArray(options.series)
+    ? options.series.map((series) => {
+        if (!series || typeof series !== "object") {
+          return series;
+        }
+
+        return {
+          ...series,
+          strokeWidth:
+            "strokeWidth" in series && series.strokeWidth != null
+              ? series.strokeWidth
+              : 3,
+          markerSize:
+            "markerSize" in series && series.markerSize != null
+              ? series.markerSize
+              : 5,
+        };
+      })
+    : options.series,
+};
+
+const sxData = JSON.stringify({
+  data,
+  options: normalizedOptions,
+});
+---
+
+<section>
+  <div
+    class:list={[minHeightClass, "w-full"]}
+    sx-data={sxData}
+    sx-chart="data"
+    sx-chart-type={chartType}
+    sx-chart-options="options"
+  ></div>
+</section>

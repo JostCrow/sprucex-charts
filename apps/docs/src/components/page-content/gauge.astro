@@ -1,0 +1,31 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  {
+    "value": 87
+  }
+];
+const options = {
+  "title": "System Health",
+  "series": [
+    {
+      "id": "gauge",
+      "name": "Uptime",
+      "valueKey": "value"
+    }
+  ],
+  "axes": {
+    "y": {
+      "min": 0,
+      "max": 100
+    }
+  }
+};
+---
+
+<StaticChartExample
+  chartType="gauge"
+  data={data}
+  options={options}
+/>

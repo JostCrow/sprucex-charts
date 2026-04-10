@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import SankeyContent from "../../components/page-content/sankey.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("sankey");
+---
+
+<DocsPageShell page={page}>
+  <SankeyContent />
+</DocsPageShell>

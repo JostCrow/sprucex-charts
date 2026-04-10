@@ -1,0 +1,47 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  {
+    "label": "Europe",
+    "value": 92
+  },
+  {
+    "label": "North America",
+    "value": 76
+  },
+  {
+    "label": "Asia",
+    "value": 121
+  },
+  {
+    "label": "LATAM",
+    "value": 43
+  },
+  {
+    "label": "Africa",
+    "value": 28
+  },
+  {
+    "label": "Oceania",
+    "value": 19
+  }
+];
+const options = {
+  "title": "Market Share Footprint",
+  "series": [
+    {
+      "id": "tree",
+      "name": "Regions",
+      "xKey": "label",
+      "valueKey": "value"
+    }
+  ]
+};
+---
+
+<StaticChartExample
+  chartType="treemap"
+  data={data}
+  options={options}
+/>

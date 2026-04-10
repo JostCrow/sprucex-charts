@@ -1,0 +1,44 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  {
+    "label": "Visitors",
+    "value": 5000
+  },
+  {
+    "label": "Qualified",
+    "value": 2800
+  },
+  {
+    "label": "Demo",
+    "value": 1480
+  },
+  {
+    "label": "Proposal",
+    "value": 860
+  },
+  {
+    "label": "Won",
+    "value": 430
+  }
+];
+const options = {
+  "title": "Deal Stage Split",
+  "subtitle": "Pie charts can show optional center content through donutCenter.",
+  "series": [
+    {
+      "id": "mix",
+      "name": "Mix",
+      "xKey": "label",
+      "valueKey": "value",
+    }
+  ]
+};
+---
+
+<StaticChartExample
+  chartType="pie"
+  data={data}
+  options={options}
+/>

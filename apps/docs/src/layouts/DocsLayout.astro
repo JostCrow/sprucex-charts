@@ -1,0 +1,68 @@
+---
+import DocsSidebar from "../components/DocsSidebar.astro";
+import DocsPageHeader from "../components/DocsPageHeader.astro";
+import type { DocPage } from "../data/docs";
+
+interface Props {
+  page: DocPage;
+}
+
+const { page } = Astro.props;
+
+import '../styles.css';
+---
+
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <title>{page.browserTitle}</title>
+    <script is:inline>
+      (() => {
+        const key = "darkMode";
+        try {
+          const saved = JSON.parse(localStorage.getItem(key) || "{}");
+          if (saved.darkMode) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch {
+          // Ignore storage access errors.
+        }
+      })();
+    </script>
+    <script defer src="/vendor/sprucex.js"></script>
+    <script defer src="/vendor/sprucex-charts.js"></script>
+  </head>
+  <body sx-page>
+    <div
+      class="min-h-screen bg-background text-foreground md:grid md:grid-cols-[15rem_minmax(0,1fr)]"
+      sx-data="docsPage"
+    >
+      <DocsSidebar currentFile={page.slug} />
+      <main {...(page.mainAttributes ?? {})} class="px-6 py-8 md:px-16 md:py-12 flex flex-col gap-4">
+        <DocsPageHeader page={page} />
+        <slot />
+      </main>
+    </div>
+    <script is:inline>
+      (() => {
+        const key = "darkMode";
+        const root = document.documentElement;
+        const persist = (isDark) => {
+          try {
+            localStorage.setItem(key, JSON.stringify({ darkMode: isDark }));
+          } catch {
+            // Ignore storage access errors.
+          }
+        };
+        document.addEventListener("basecoat:theme", () => {
+          const nextIsDark = !root.classList.contains("dark");
+          root.classList.toggle("dark", nextIsDark);
+          persist(nextIsDark);
+        });
+      })();
+    </script>
+  </body>
+</html>

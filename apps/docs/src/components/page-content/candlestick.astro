@@ -1,0 +1,50 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const marketData = [
+  { x: "2025-02-01", open: 100, high: 106, low: 95, close: 100, volume: 1400 },
+  { x: "2025-02-02", open: 104, high: 114, low: 98, close: 107, volume: 1600 },
+  { x: "2025-02-03", open: 107, high: 120, low: 102, close: 112, volume: 1800 },
+  { x: "2025-02-04", open: 110, high: 122, low: 104, close: 116, volume: 2000 },
+  { x: "2025-02-05", open: 113, high: 125, low: 108, close: 118, volume: 1880 },
+  { x: "2025-02-06", open: 114, high: 126, low: 108, close: 118, volume: 2080 },
+  { x: "2025-02-07", open: 114, high: 121, low: 109, close: 115, volume: 2280 },
+  { x: "2025-02-08", open: 114, high: 121, low: 106, close: 112, volume: 2480 },
+  { x: "2025-02-09", open: 113, high: 121, low: 104, close: 109, volume: 2360 },
+  { x: "2025-02-10", open: 112, high: 118, low: 100, close: 106, volume: 2560 },
+  { x: "2025-02-11", open: 110, high: 117, low: 100, close: 105, volume: 2760 },
+  { x: "2025-02-12", open: 109, high: 117, low: 99, close: 105, volume: 2960 },
+];
+
+const options = {
+  title: "Price Action",
+  subtitle: "Candlestick session bodies with optional volume overlay.",
+  series: [
+    {
+      id: "price",
+      name: "Price",
+      xKey: "x",
+      openKey: "open",
+      highKey: "high",
+      lowKey: "low",
+      closeKey: "close",
+    },
+  ],
+  axes: {
+    x: {
+      scaleType: "category",
+    },
+    y: {
+      grid: true,
+    },
+  },
+  volumeOverlay: {
+    enabled: true,
+    data: marketData,
+    xKey: "x",
+    yKey: "volume",
+  },
+};
+---
+
+<StaticChartExample chartType="candlestick" data={marketData} options={options} />

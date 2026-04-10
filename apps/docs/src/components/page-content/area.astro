@@ -1,0 +1,81 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  {
+    "month": "Jan",
+    "revenue": 38,
+    "pipeline": 28,
+    "margin": 17
+  },
+  {
+    "month": "Feb",
+    "revenue": 54,
+    "pipeline": 40,
+    "margin": 22
+  },
+  {
+    "month": "Mar",
+    "revenue": 70,
+    "pipeline": 38,
+    "margin": 26
+  },
+  {
+    "month": "Apr",
+    "revenue": 59,
+    "pipeline": 50,
+    "margin": 31
+  },
+  {
+    "month": "May",
+    "revenue": 75,
+    "pipeline": 48,
+    "margin": 27
+  },
+  {
+    "month": "Jun",
+    "revenue": 91,
+    "pipeline": 60,
+    "margin": 32
+  },
+  {
+    "month": "Jul",
+    "revenue": 80,
+    "pipeline": 58,
+    "margin": 36
+  },
+  {
+    "month": "Aug",
+    "revenue": 96,
+    "pipeline": 70,
+    "margin": 41
+  }
+];
+const options = {
+  "title": "Area Ramp",
+  "subtitle": "Layered area chart with soft opacity.",
+  "series": [
+    {
+      "id": "revenue",
+      "name": "Revenue",
+      "xKey": "month",
+      "yKey": "revenue",
+      "areaOpacity": 0.25
+    }
+  ],
+  "axes": {
+    "x": {
+      "scaleType": "category"
+    },
+    "y": {
+      "grid": true
+    }
+  }
+};
+---
+
+<StaticChartExample
+    chartType="area"
+    data={data}
+    options={options}
+/>

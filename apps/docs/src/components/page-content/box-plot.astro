@@ -1,0 +1,50 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  { group: "Alpha", value: 40 },
+  { group: "Alpha", value: 43 },
+  { group: "Alpha", value: 47 },
+  { group: "Alpha", value: 49 },
+  { group: "Alpha", value: 53 },
+  { group: "Alpha", value: 58 },
+  { group: "Beta", value: 52 },
+  { group: "Beta", value: 55 },
+  { group: "Beta", value: 59 },
+  { group: "Beta", value: 63 },
+  { group: "Beta", value: 65 },
+  { group: "Beta", value: 70 },
+  { group: "Gamma", value: 64 },
+  { group: "Gamma", value: 67 },
+  { group: "Gamma", value: 71 },
+  { group: "Gamma", value: 75 },
+  { group: "Gamma", value: 77 },
+  { group: "Gamma", value: 82 },
+  { group: "Delta", value: 76 },
+  { group: "Delta", value: 79 },
+  { group: "Delta", value: 83 },
+  { group: "Delta", value: 87 },
+  { group: "Delta", value: 89 },
+  { group: "Delta", value: 94 },
+];
+
+const options = {
+  title: "Team Distribution",
+  subtitle: "Grouped quartile summaries by category.",
+  series: [
+    {
+      id: "distribution",
+      name: "Distribution",
+      xKey: "group",
+      yKey: "value",
+    },
+  ],
+  axes: {
+    y: {
+      grid: true,
+    },
+  },
+};
+---
+
+<StaticChartExample chartType="box-plot" data={data} options={options} />

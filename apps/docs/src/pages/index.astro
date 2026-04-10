@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../components/DocsPageShell.astro";
+import IndexContent from "../components/page-content/index.astro";
+import { requireDocPage } from "../data/docs";
+
+const page = requireDocPage("index");
+---
+
+<DocsPageShell page={page}>
+  <IndexContent />
+</DocsPageShell>

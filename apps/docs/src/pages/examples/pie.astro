@@ -1,0 +1,13 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import PieContent from "../../components/page-content/pie.astro";
+import DonutContent from "../../components/page-content/donut.astro"
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("pie");
+---
+
+<DocsPageShell page={page}>
+  <PieContent />
+  <DonutContent />
+</DocsPageShell>

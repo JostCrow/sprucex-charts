@@ -1,0 +1,174 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  {
+    "x": "Q1",
+    "y": "North",
+    "value": 14
+  },
+  {
+    "x": "Q2",
+    "y": "North",
+    "value": 32
+  },
+  {
+    "x": "Q3",
+    "y": "North",
+    "value": 28
+  },
+  {
+    "x": "Q4",
+    "y": "North",
+    "value": 46
+  },
+  {
+    "x": "Q5",
+    "y": "North",
+    "value": 42
+  },
+  {
+    "x": "Q6",
+    "y": "North",
+    "value": 60
+  },
+  {
+    "x": "Q1",
+    "y": "South",
+    "value": 28
+  },
+  {
+    "x": "Q2",
+    "y": "South",
+    "value": 53
+  },
+  {
+    "x": "Q3",
+    "y": "South",
+    "value": 56
+  },
+  {
+    "x": "Q4",
+    "y": "South",
+    "value": 81
+  },
+  {
+    "x": "Q5",
+    "y": "South",
+    "value": 84
+  },
+  {
+    "x": "Q6",
+    "y": "South",
+    "value": 109
+  },
+  {
+    "x": "Q1",
+    "y": "West",
+    "value": 42
+  },
+  {
+    "x": "Q2",
+    "y": "West",
+    "value": 74
+  },
+  {
+    "x": "Q3",
+    "y": "West",
+    "value": 84
+  },
+  {
+    "x": "Q4",
+    "y": "West",
+    "value": 116
+  },
+  {
+    "x": "Q5",
+    "y": "West",
+    "value": 126
+  },
+  {
+    "x": "Q6",
+    "y": "West",
+    "value": 158
+  },
+  {
+    "x": "Q1",
+    "y": "East",
+    "value": 56
+  },
+  {
+    "x": "Q2",
+    "y": "East",
+    "value": 95
+  },
+  {
+    "x": "Q3",
+    "y": "East",
+    "value": 112
+  },
+  {
+    "x": "Q4",
+    "y": "East",
+    "value": 151
+  },
+  {
+    "x": "Q5",
+    "y": "East",
+    "value": 168
+  },
+  {
+    "x": "Q6",
+    "y": "East",
+    "value": 207
+  },
+  {
+    "x": "Q1",
+    "y": "Online",
+    "value": 70
+  },
+  {
+    "x": "Q2",
+    "y": "Online",
+    "value": 116
+  },
+  {
+    "x": "Q3",
+    "y": "Online",
+    "value": 140
+  },
+  {
+    "x": "Q4",
+    "y": "Online",
+    "value": 186
+  },
+  {
+    "x": "Q5",
+    "y": "Online",
+    "value": 210
+  },
+  {
+    "x": "Q6",
+    "y": "Online",
+    "value": 256
+  }
+];
+const options = {
+  "title": "Demand Intensity",
+  "series": [
+    {
+      "id": "heat",
+      "name": "Heat",
+      "xKey": "x",
+      "yKey": "y",
+      "valueKey": "value"
+    }
+  ]
+};
+---
+
+<StaticChartExample
+  chartType="heatmap"
+  data={data}
+  options={options}
+/>

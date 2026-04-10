@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import HorizontalBarContent from "../../components/page-content/horizontal-bar.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("horizontal-bar");
+---
+
+<DocsPageShell page={page}>
+  <HorizontalBarContent />
+</DocsPageShell>

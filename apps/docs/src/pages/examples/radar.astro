@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import RadarContent from "../../components/page-content/radar.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("radar");
+---
+
+<DocsPageShell page={page}>
+  <RadarContent />
+</DocsPageShell>

@@ -1,0 +1,2498 @@
+<div class="overflow-x-auto">
+        <table class="table text-xs w-full">
+          <thead>
+            <tr>
+              <th>Setting</th>
+              <th>Value type</th>
+              <th>Enum values</th>
+              <th>Default</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody id="settings-table-body" class="[&>tr]:transition-colors [&>tr:hover]:bg-muted">
+            <tr data-setting-row data-setting="sx-chart">
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>expression -&gt; array&lt;object&gt; | object</div>
+              </td>
+              <td class="whitespace-normal">—</td>
+              <td class="whitespace-normal">
+                <div>required; falls back to []</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  The SpruceX expression or literal that resolves to chart data.
+                  Non-object results are treated as an empty dataset.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-type</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>expression -&gt; string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  line, area, bar, horizontal-bar, stacked-bar, stacked-area,
+                  pie, scatter, bubble, histogram, combo, multi-axis,
+                  heatmap, box-plot, radar, treemap, sankey, funnel, gauge,
+                  polar, candlestick, ohlc, map
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>line</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  The chart family used for rendering. Use this instead of
+                  putting type inside sx-chart-options.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>expression -&gt; object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>&#123;&#125;</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Nested configuration object. The integration strips out data
+                  and type from this object before rendering.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.animate</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Enables entry and update animations when the browser is not in
+                  reduced-motion mode.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[]</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>array&lt;object&gt;</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto-generate one series from the data</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Series definitions. When omitted, the renderer infers a single
+                  default series from the first row of data.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].id</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>name or generated key</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Stable internal series key used for legend toggling, hover
+                  state, and sync behavior.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].name</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>id or Series N</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Human-readable label used in the legend and tooltip output.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].type</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  line, area, bar, horizontal-bar, stacked-bar, stacked-area,
+                  pie, scatter, bubble, histogram, combo, multi-axis,
+                  heatmap, box-plot, radar, treemap, sankey, funnel, gauge,
+                  polar, candlestick, ohlc, map
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>current chart type</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Per-series chart type. This is what enables mixed-series
+                  layouts such as combo charts.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].xKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>x or inferred from the data</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Key used for horizontal values, categories, dates, or labels.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].yKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>y or inferred from the data</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Key used for primary numeric values in most cartesian series.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].valueKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>value or the inferred y key</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Key used by single-value chart types such as pie, gauge,
+                  treemap, funnel, heatmap, and map.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].openKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>open</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Data key for the opening price/value in candlestick and OHLC
+                  series.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].highKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>high</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Data key for the high value in candlestick and OHLC series.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].lowKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>low</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Data key for the low value in candlestick and OHLC series.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].closeKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>close</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Data key for the closing price/value in candlestick and OHLC
+                  series.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].sizeKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>size</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Data key used to size bubble markers.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].color</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>next theme palette color</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Explicit series color override. When omitted, colors come from
+                  the active theme palette.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].strokeWidth</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>2.5 on line strokes</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Stroke thickness for line-based series.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].fillOpacity</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>0.88 on filled bars</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Opacity for filled bar-style segments that support per-series
+                  alpha.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].areaOpacity</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>0.22 area, 0.28 stacked-area</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Opacity used for area fills beneath line or stacked-area
+                  paths.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].markerShape</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>circle, square, diamond</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>circle</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Controls the marker glyph for line-style point markers.
+                  Scatter and bubble series continue to render as circles.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].markerSize</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>3 for line/area, 5 for scatter</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Marker radius for point-based series. Bubble charts instead
+                  size points from sizeKey.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].barWidth</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Sets an explicit pixel width for bar-like marks. Values wider
+                  than the category slot are clamped automatically.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].dashStyle</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>solid</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>SVG stroke-dasharray value for line-based series.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].visible</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Sets the initial visibility of the series before legend
+                  toggling or state changes.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].labels</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Renders per-point data labels for supported series such as
+                  bar, line, area, stacked-bar, stacked-area, pie, polar,
+                  histogram, treemap, and gauge.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].order</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>0</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Sort key used before rendering. Lower numbers are drawn first.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].axis</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>y, y2</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>y</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Assigns the series to the primary y scale or the secondary y2
+                  scale for multi-axis compositions.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].format</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>(value) =&gt; string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>axis-aware default formatter</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Overrides per-series value formatting for labels, tooltips,
+                  and other value readouts.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].nodes[]</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>array&lt;object&gt;</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>[]</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Sankey node definitions. Only relevant when a series renders
+                  as sankey.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].nodes[].id</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>required</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Unique node identifier used by sankey links.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].nodes[].name</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>same as id</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Display label for the sankey node.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].nodes[].value</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto from connected links</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Optional node weight. The layout still normalizes node size
+                  against the largest incoming or outgoing flow.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].links[]</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>array&lt;object&gt;</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>[]</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Sankey link definitions. Only relevant when a series renders
+                  as sankey.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].links[].source</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>required</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Source node id for the sankey link.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].links[].target</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>required</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Target node id for the sankey link.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.series[].links[].value</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>required</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Weight of the sankey flow between the source and target nodes.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>&#123;&#125;</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Container for axis configuration. Use x, y, and y2 child
+                  objects to target each axis.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Primary horizontal axis. This is the axis object that controls
+                  x-scale inference and rendered x labels.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x.enabled</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Shows or hides the rendered x-axis line, ticks, labels, and
+                  title.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x.scaleType</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>linear, log, time, category, percentage</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>auto from the first x value</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Forces the x-axis scale. When omitted, the renderer infers
+                  time, linear, or category from the bound data.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x.min</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number | Date | string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto from data</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Overrides the lower bound for time and linear x scales.
+                  Category axes still use the category domain from the data.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x.max</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number | Date | string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto from data</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Overrides the upper bound for time and linear x scales.
+                  Category axes still use the category domain from the data.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x.tickCount</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>about 6 ticks</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Sets the target number of rendered x-axis ticks when
+                  tickValues is not provided.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x.tickValues</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Array&lt;number | string | Date&gt;</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Uses an explicit x-axis tick list instead of generated ticks.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x.tickFormat</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string | (value) =&gt; string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto locale/date formatting</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Formats x-axis labels and x values shown in tooltips. String
+                  formats apply to numeric values; functions receive the raw
+                  value.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x.labelRotation</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>0</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Rotates x-axis tick labels around their anchor point.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x.title</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>empty</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Renders an x-axis title beneath the tick labels.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.x.grid</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Draws vertical grid lines for the resolved x tick positions.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Primary vertical axis. This axis controls the main y scale,
+                  label formatting, and horizontal grid lines.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y.enabled</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Shows or hides the rendered primary y-axis line, ticks,
+                  labels, and title.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y.scaleType</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>linear, log, time, category, percentage</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>linear</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Controls the primary y scale. Linear and log scales are
+                  supported directly, and percentage is useful for bounded
+                  ratio-style views.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y.min</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number | Date | string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto with zero baseline</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Overrides the lower bound of the primary y scale. When
+                  omitted, the renderer expands the domain from the visible
+                  series and includes zero.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y.max</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number | Date | string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto from data</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Overrides the upper bound of the primary y scale.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y.tickCount</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>5 ticks</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Sets the target number of primary y ticks when tickValues is
+                  not provided.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y.tickValues</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Array&lt;number | string | Date&gt;</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Uses an explicit primary y tick list instead of generated
+                  ticks.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y.tickFormat</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string | (value) =&gt; string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto locale formatting</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Formats primary y-axis labels and primary-series values in
+                  tooltips.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y.labelRotation</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>0</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Rotates primary y tick labels around their anchor point.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y.title</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>empty</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Renders a rotated title alongside the primary y axis.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y.grid</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Shows or hides the horizontal grid lines that span the plot
+                  area.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto when a series uses axis: 'y2'</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Secondary y-axis config used by series assigned to y2. It
+                  provides an alternate scale and renders on the right side of
+                  the chart.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.enabled</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Shows or hides the rendered secondary y-axis line, ticks,
+                  labels, and title.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.scaleType</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>linear, log, time, category, percentage</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>linear</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Controls the secondary y scale for series assigned to y2.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.position</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>left, right, top, bottom</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>right (logical only)</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  The secondary y axis renders on the right edge of the chart.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.min</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number | Date | string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto from y2 series</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Overrides the lower bound of the secondary y scale.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.max</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number | Date | string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto from y2 series</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Overrides the upper bound of the secondary y scale.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.tickCount</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>typed value ignored</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Typed only. Secondary tick generation is not exposed
+                  separately yet.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.tickValues</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Array&lt;number | string | Date&gt;</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Typed only. Explicit secondary ticks are not rendered yet.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.tickFormat</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string | (value) =&gt; string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto locale formatting</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Formats values for y2 series in tooltips and internal y2
+                  calculations.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.tickInterval</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>auto</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Typed only. Secondary tick interval control is not implemented
+                  yet.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.labelRotation</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>0; typed value ignored</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Secondary tick labels are rendered. Rotation is still typed
+                  only.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.title</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>empty; typed value ignored</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Typed only. Secondary axis titles are not rendered yet.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.grid</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false; typed value ignored</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Typed only. Grid lines come from the primary y axis.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.reverse</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false; typed value ignored</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Typed only. Reversing the secondary y direction is not
+                  implemented yet.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.axes.y2.domainPadding</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>automatic expansion</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Typed only. The secondary y domain gets its own automatic
+                  buffer when inferred.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>shown when series exist</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Legend settings. The current renderer always lays the legend
+                  out as a single row above the plot.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.enabled</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true when series exist</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Shows or hides the legend block entirely.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.position</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>top, right, bottom, left, inside</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>top</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Positions the legend above, below, beside, or inside the
+                  chart frame.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.layout</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>horizontal, vertical, wrapped</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>horizontal</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Controls whether legend items render in rows or columns.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.alignment</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>start, center, end</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>start</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Aligns legend content within the available legend block.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.inside</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Convenience flag for placing the legend inside the plot.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.itemShape</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>line, dot, square</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>dot</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Controls the legend marker glyph for each entry.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.itemSpacing</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>18</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Adjusts the spacing between legend items.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.toggle</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Allows clicking legend items to hide or re-show series.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.labelFormatter</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>(label) =&gt; string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>identity</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Formats the displayed legend text for each entry.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.scroll</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Allows mouse-wheel paging through wrapped legend rows.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.legend.pagination</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Shows previous and next controls when the legend spans multiple rows.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.tooltip</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>&#123;&#125;</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Tooltip behavior and formatting. Shared tooltips are the
+                  default when multiple series align on the same key.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.tooltip.enabled</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Turns tooltip display on or off without disabling hover state
+                  itself.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.tooltip.shared</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  When false, only the nearest point is shown. When true,
+                  matching series points for the hovered key are grouped
+                  together.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.tooltip.formatter</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>(point, series) =&gt; string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>built-in label/value markup</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Overrides the rendered tooltip content for single-point
+                  tooltips and shared tooltip rows.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.tooltip.conditional</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>(point) =&gt; boolean</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>always show</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Return false to suppress the tooltip for a given hovered
+                  datum.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.interactions</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>&#123;&#125;</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Pointer and gesture behavior for charts that support direct
+                  interaction.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.interactions.hover</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Enables hover state, tooltip positioning, and cartesian
+                  crosshair rendering.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.interactions.brush</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Enables shift-drag brushing to zoom into a cartesian x range.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.interactions.zoom</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Enables mouse-wheel zoom on cartesian charts with numeric or
+                  time x scales.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.interactions.pan</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Enables pointer-drag panning when the chart is zoomable.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.interactions.resetZoom</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Allows double-click to clear the active zoom range.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.interactions.drilldown</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>(point) =&gt; void</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>disabled</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Invokes a callback with the clicked datum for drilldown-style
+                  flows.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.locale</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>en-US</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Locale passed to Intl for number and date formatting.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.timeZone</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>browser local time zone</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Optional time zone override used when formatting dates.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.responsive</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Re-renders the chart on window resize. Set false if you want
+                  to manage resize calls manually.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.accessibility</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>&#123;&#125;</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Accessibility metadata for the chart root and live region.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.accessibility.title</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>title or '&lt;type&gt; chart'</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Applied to the root SVG as the aria-label fallback.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.syncGroup</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>disabled</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Group key used to synchronize hover state between multiple
+                  chart instances.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.title</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>empty</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Main chart title rendered above the plot.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.subtitle</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>empty</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Secondary chart title rendered below the main title.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.padding</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>40</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Uniform outer padding applied to every side of the chart
+                  frame before titles, legends, and axes are placed.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.emptyState</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>No data to display</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Message shown when the chart has no usable data.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.width</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>measured container width, min 320</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Explicit chart width in pixels. When omitted, the chart uses
+                  the container width with a 320px minimum and an 820px fallback
+                  if no width is available.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.height</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>460</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Explicit chart height in pixels.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.map</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>&#123; features: [], projection: 'mercator' &#125;</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Map-chart specific settings for geometry input and value
+                  lookup.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.map.features</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>GeoJSON FeatureCollection | Feature[]</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>[]</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Geographic features used to draw the map geometry.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.map.projection</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>mercator, equal-earth, orthographic, custom</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>mercator</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Projection used to fit map features into the chart frame.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.map.valueKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>series.valueKey or value</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Key used to read numeric values from the bound map data rows.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.map.pointKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>disabled</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Reads point overlay locations from each data row. The value can
+                  reference a feature id/name or provide lon/lat coordinates.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.map.pointRadius</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>6</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Sets the radius of rendered point overlays on the map.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.donutCenter</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>disabled</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Center settings for pie charts. When provided, the pie renders
+                  with an inner cutout and optional center content.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.donutCenter.enabled</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Shows or hides the center label inside the pie cutout.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.donutCenter.showPercentage</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Shows total percentage text instead of the raw total when
+                  nothing is hovered.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.donutCenter.formatter</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>(value, total, label, percentage) =&gt; string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>built-in total/percentage text</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Custom formatter for the center label content.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.volumeOverlay</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>object</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>disabled</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Overlay bars used mainly with financial charts to show volume
+                  beneath the main plot.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.volumeOverlay.enabled</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Turns the overlay on when overlay data is also provided.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.volumeOverlay.data</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>array&lt;object&gt;</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>[]</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Dataset used for the overlay bars.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.volumeOverlay.xKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>first visible series xKey or x</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Key used to align overlay bars against the main x scale.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.volumeOverlay.yKey</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>volume</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Key used to read the overlay magnitude for each bar.</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div id="no-results" class="hidden py-8 text-center text-muted-foreground">
+          No settings match your search.
+        </div>
+      </div>

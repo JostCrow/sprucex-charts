@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#020617" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <!-- Chart X Leg 1 (Background X Leg) Gradient -->
+    <linearGradient id="leg1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#475569" />
+    </linearGradient>
+
+    <!-- Chart X Leg 2 (Primary Spruce X Leg) Gradient -->
+    <linearGradient id="chart" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="50%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+
+    <!-- Drop shadow for depth -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" floor-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Base Rounded Rectangle -->
+  <rect width="512" height="512" rx="120" fill="url(#bg)" />
+
+  <!-- Grid lines -->
+  <g opacity="0.5">
+    <path d="M 100 100 L 412 100 M 100 204 L 412 204 M 100 308 L 412 308 M 100 412 L 412 412" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+    <path d="M 100 100 L 100 412 M 204 100 L 204 412 M 308 100 L 308 412 M 412 100 L 412 412" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <!-- Left Leg of X (Smooth straight line, acts as comparison/baseline) -->
+  <line x1="140" y1="140" x2="372" y2="372" stroke="url(#leg1)" stroke-width="48" stroke-linecap="round" />
+
+
+  <!-- Right Leg of X (The Chart Line going UP) -->
+  <g filter="url(#shadow)">
+    <path d="M 140 372 L 200 280 L 230 310 L 256 256 L 300 180 L 330 210 L 372 140"
+          stroke="url(#chart)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+    <!-- Data Points for the Chart -->
+    <circle cx="140" cy="372" r="14" fill="#ffffff" />
+    <circle cx="200" cy="280" r="14" fill="#ffffff" />
+    <circle cx="230" cy="310" r="14" fill="#ffffff" />
+    <circle cx="256" cy="256" r="20" fill="#ffffff" /> <!-- Intersection Point -->
+    <circle cx="300" cy="180" r="14" fill="#ffffff" />
+    <circle cx="330" cy="210" r="14" fill="#ffffff" />
+    <circle cx="372" cy="140" r="14" fill="#ffffff" />
+  </g>
+</svg>

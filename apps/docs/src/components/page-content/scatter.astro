@@ -1,0 +1,284 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  {
+    "x": 1,
+    "y": 36,
+    "size": 5,
+    "label": "Point 1"
+  },
+  {
+    "x": 2,
+    "y": 42,
+    "size": 6,
+    "label": "Point 2"
+  },
+  {
+    "x": 3,
+    "y": 49,
+    "size": 7,
+    "label": "Point 3"
+  },
+  {
+    "x": 4,
+    "y": 54,
+    "size": 8,
+    "label": "Point 4"
+  },
+  {
+    "x": 5,
+    "y": 59,
+    "size": 9,
+    "label": "Point 5"
+  },
+  {
+    "x": 6,
+    "y": 62,
+    "size": 10,
+    "label": "Point 6"
+  },
+  {
+    "x": 7,
+    "y": 64,
+    "size": 11,
+    "label": "Point 7"
+  },
+  {
+    "x": 8,
+    "y": 58,
+    "size": 12,
+    "label": "Point 8"
+  },
+  {
+    "x": 9,
+    "y": 57,
+    "size": 13,
+    "label": "Point 9"
+  },
+  {
+    "x": 10,
+    "y": 55,
+    "size": 5,
+    "label": "Point 10"
+  },
+  {
+    "x": 11,
+    "y": 52,
+    "size": 6,
+    "label": "Point 11"
+  },
+  {
+    "x": 12,
+    "y": 48,
+    "size": 7,
+    "label": "Point 12"
+  },
+  {
+    "x": 13,
+    "y": 44,
+    "size": 8,
+    "label": "Point 13"
+  },
+  {
+    "x": 14,
+    "y": 40,
+    "size": 9,
+    "label": "Point 14"
+  },
+  {
+    "x": 15,
+    "y": 28,
+    "size": 10,
+    "label": "Point 15"
+  },
+  {
+    "x": 16,
+    "y": 24,
+    "size": 11,
+    "label": "Point 16"
+  },
+  {
+    "x": 17,
+    "y": 21,
+    "size": 12,
+    "label": "Point 17"
+  },
+  {
+    "x": 18,
+    "y": 19,
+    "size": 13,
+    "label": "Point 18"
+  },
+  {
+    "x": 19,
+    "y": 18,
+    "size": 5,
+    "label": "Point 19"
+  },
+  {
+    "x": 20,
+    "y": 19,
+    "size": 6,
+    "label": "Point 20"
+  },
+  {
+    "x": 21,
+    "y": 21,
+    "size": 7,
+    "label": "Point 21"
+  },
+  {
+    "x": 22,
+    "y": 17,
+    "size": 8,
+    "label": "Point 22"
+  },
+  {
+    "x": 23,
+    "y": 21,
+    "size": 9,
+    "label": "Point 23"
+  },
+  {
+    "x": 24,
+    "y": 27,
+    "size": 10,
+    "label": "Point 24"
+  },
+  {
+    "x": 25,
+    "y": 33,
+    "size": 11,
+    "label": "Point 25"
+  },
+  {
+    "x": 26,
+    "y": 39,
+    "size": 12,
+    "label": "Point 26"
+  },
+  {
+    "x": 27,
+    "y": 46,
+    "size": 13,
+    "label": "Point 27"
+  },
+  {
+    "x": 28,
+    "y": 52,
+    "size": 5,
+    "label": "Point 28"
+  },
+  {
+    "x": 29,
+    "y": 50,
+    "size": 6,
+    "label": "Point 29"
+  },
+  {
+    "x": 30,
+    "y": 55,
+    "size": 7,
+    "label": "Point 30"
+  },
+  {
+    "x": 31,
+    "y": 59,
+    "size": 8,
+    "label": "Point 31"
+  },
+  {
+    "x": 32,
+    "y": 61,
+    "size": 9,
+    "label": "Point 32"
+  },
+  {
+    "x": 33,
+    "y": 62,
+    "size": 10,
+    "label": "Point 33"
+  },
+  {
+    "x": 34,
+    "y": 61,
+    "size": 11,
+    "label": "Point 34"
+  },
+  {
+    "x": 35,
+    "y": 60,
+    "size": 12,
+    "label": "Point 35"
+  },
+  {
+    "x": 36,
+    "y": 50,
+    "size": 13,
+    "label": "Point 36"
+  },
+  {
+    "x": 37,
+    "y": 46,
+    "size": 5,
+    "label": "Point 37"
+  },
+  {
+    "x": 38,
+    "y": 42,
+    "size": 6,
+    "label": "Point 38"
+  },
+  {
+    "x": 39,
+    "y": 37,
+    "size": 7,
+    "label": "Point 39"
+  },
+  {
+    "x": 40,
+    "y": 33,
+    "size": 8,
+    "label": "Point 40"
+  },
+  {
+    "x": 41,
+    "y": 29,
+    "size": 9,
+    "label": "Point 41"
+  },
+  {
+    "x": 42,
+    "y": 26,
+    "size": 10,
+    "label": "Point 42"
+  }
+];
+const options = {
+  "title": "Signal Spread",
+  "series": [
+    {
+      "id": "spread",
+      "name": "Spread",
+      "xKey": "x",
+      "yKey": "y",
+      "markerSize": 5
+    }
+  ],
+  "axes": {
+    "x": {
+      "scaleType": "linear"
+    },
+    "y": {
+      "grid": true
+    }
+  }
+};
+---
+
+<StaticChartExample
+  chartType="scatter"
+  data={data}
+  options={options}
+/>

@@ -1,0 +1,14 @@
+---
+import DocsLayout from "../layouts/DocsLayout.astro";
+import type { DocPage } from "../data/docs";
+
+interface Props {
+  page: DocPage;
+}
+
+const { page } = Astro.props;
+---
+
+<DocsLayout page={page}>
+  <slot />
+</DocsLayout>

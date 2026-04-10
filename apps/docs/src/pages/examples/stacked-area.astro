@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import StackedAreaContent from "../../components/page-content/stacked-area.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("stacked-area");
+---
+
+<DocsPageShell page={page}>
+  <StackedAreaContent />
+</DocsPageShell>

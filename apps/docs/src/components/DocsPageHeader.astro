@@ -1,0 +1,84 @@
+---
+import type { DocPage } from "../data/docs";
+
+interface Props {
+  page: DocPage;
+}
+
+const { page } = Astro.props;
+const pills = page.pills ?? [];
+const actions = page.actions ?? [];
+---
+
+{page.variant === "hero" ? (
+  <header class="mb-16">
+    {page.eyebrow && (
+      <div class="mb-4 inline-flex rounded-full bg-primary/12 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.05em] text-primary">
+        {page.eyebrow}
+      </div>
+    )}
+    <h1 class="mb-4 bg-linear-to-br from-foreground to-primary bg-clip-text text-4xl font-bold leading-tight tracking-tight text-transparent md:text-5xl">
+      {page.heading}
+    </h1>
+    <p class="mb-8 max-w-150 text-lg leading-relaxed text-muted-foreground">{page.description}</p>
+    {actions.length > 0 && (
+      <div class="flex flex-wrap gap-4">
+        {actions.map((action) => (
+          <a href={action.href} class={action.variant === "primary" ? "btn btn-primary" : "btn-outline"}>
+            {action.label}
+          </a>
+        ))}
+      </div>
+    )}
+  </header>
+) : (
+  <section class="flex flex-col gap-6">
+    <div class="grid gap-3">
+      <h1 class="bg-linear-to-br from-foreground to-primary bg-clip-text text-3xl font-bold leading-tight tracking-tight text-transparent md:text-4xl">
+        {page.heading}
+      </h1>
+      <p class="max-w-3xl text-base leading-6 text-muted-foreground">{page.description}</p>
+    </div>
+
+    {page.showSearch && (
+      <div class="mt-2">
+        <div class="relative">
+          <svg
+            class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <input
+            type="search"
+            placeholder="Search settings..."
+            class="input w-full max-w-sm pl-10"
+            sx-model="searchQuery"
+            oninput="
+              const query = this.value.toLowerCase();
+              const rows = document.querySelectorAll('[data-setting-row]');
+              let visibleCount = 0;
+              rows.forEach((row) => {
+                const text = row.innerText.toLowerCase();
+                const isVisible = !query || text.includes(query);
+                row.style.display = isVisible ? '' : 'none';
+                if (isVisible) visibleCount++;
+              });
+              const emptyMsg = document.getElementById('no-results');
+              if (emptyMsg) emptyMsg.style.display = visibleCount === 0 ? 'block' : 'none';
+            "
+          />
+        </div>
+      </div>
+    )}
+  </section>
+)}

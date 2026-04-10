@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import PolarContent from "../../components/page-content/polar.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("polar");
+---
+
+<DocsPageShell page={page}>
+  <PolarContent />
+</DocsPageShell>

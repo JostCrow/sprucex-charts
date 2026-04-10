@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import BubbleContent from "../../components/page-content/bubble.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("bubble");
+---
+
+<DocsPageShell page={page}>
+  <BubbleContent />
+</DocsPageShell>

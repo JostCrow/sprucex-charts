@@ -1,0 +1,11 @@
+---
+import DocsPageShell from "../../components/DocsPageShell.astro";
+import OhlcContent from "../../components/page-content/ohlc.astro";
+import { requireDocPage } from "../../data/docs";
+
+const page = requireDocPage("ohlc");
+---
+
+<DocsPageShell page={page}>
+  <OhlcContent />
+</DocsPageShell>
