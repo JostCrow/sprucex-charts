@@ -3,6 +3,7 @@ interface Props {
   chartType: string;
   data: unknown;
   minHeightClass?: string;
+  containerClass?: string;
   options?: Record<string, unknown>;
 }
 
@@ -10,8 +11,21 @@ const {
   chartType,
   data,
   minHeightClass = "min-h-112",
+  containerClass,
   options = {},
 } = Astro.props;
+
+const defaultMarkerSize = (series: Record<string, unknown>) => {
+  const seriesType =
+    typeof series.type === "string" && series.type.length > 0
+      ? series.type
+      : chartType;
+  return seriesType === "line" ||
+    seriesType === "area" ||
+    seriesType === "stacked-area"
+    ? 0
+    : 5;
+};
 
 const normalizedOptions = {
   ...options,
@@ -30,7 +44,7 @@ const normalizedOptions = {
           markerSize:
             "markerSize" in series && series.markerSize != null
               ? series.markerSize
-              : 5,
+              : defaultMarkerSize(series),
         };
       })
     : options.series,
@@ -40,11 +54,13 @@ const sxData = JSON.stringify({
   data,
   options: normalizedOptions,
 });
+
+const resolvedContainerClass = containerClass ?? `${minHeightClass} w-full`;
 ---
 
 <section>
   <div
-    class:list={[minHeightClass, "w-full"]}
+    class={resolvedContainerClass}
     sx-data={sxData}
     sx-chart="data"
     sx-chart-type={chartType}

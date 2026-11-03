@@ -1,0 +1,79 @@
+---
+const config = {
+  type: "line",
+  animate: false,
+  series: [{ id: "metric", name: "Metric", xKey: "date", yKey: "revenue" }],
+  axes: {
+    x: { scaleType: "category", format: { type: "date" } },
+    y: { min: 0, format: { type: "number", currency: "USD" } },
+  },
+};
+const state = JSON.stringify({
+  config,
+  saved: "",
+  rows: [
+    { date: "2026-01-01", period: "January", revenue: 1200, profit: 300 },
+    { date: "2026-02-01", period: "February", revenue: 1800, profit: 480 },
+    { date: "2026-03-01", period: "March", revenue: 1500, profit: 420 },
+  ],
+});
+const markup = `<div sx-data="{ rows: myData, config: savedConfig }">
+  <div sx-chart="rows" sx-chart-config="config"></div>
+</div>`;
+const api = `const chart = SpruceXCharts.getChartInstance(element);
+const saved = JSON.stringify(chart.getConfig());
+chart.setConfig(JSON.parse(saved)); // replaces settings; keeps data
+chart.update({ series: [{ xKey: "date", yKey: "profit" }] });
+element.addEventListener("sx-chart:configchange", ({ detail }) => {
+  localStorage.setItem("chart-config", JSON.stringify(detail.config));
+});`;
+---
+<section class="mb-8 grid gap-4 rounded-xl border border-border bg-card p-6" sx-data={state}>
+  <h2 class="text-xl font-semibold">Editable chart configuration</h2>
+  <p class="text-sm text-muted-foreground">
+    Map data fields to axes and choose their display independently. The config binding accepts changes at any time and writes chart edits, such as legend visibility, back to state. Save the JSON wherever your application stores preferences.
+  </p>
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <label class="grid gap-2 text-sm">Chart
+      <select class="select w-full" sx-model="config.type">
+        <option value="line">Line</option><option value="bar">Bar</option><option value="area">Area</option>
+      </select>
+    </label>
+    <label class="grid gap-2 text-sm">X field
+      <select class="select w-full" sx-model="config.series[0].xKey">
+        <option value="date">Date</option><option value="period">Period</option>
+      </select>
+    </label>
+    <label class="grid gap-2 text-sm">X display
+      <select class="select w-full" sx-model="config.axes.x.format.type">
+        <option value="date">Date</option><option value="text">Text</option>
+      </select>
+    </label>
+    <label class="grid gap-2 text-sm">Y field
+      <select class="select w-full" sx-model="config.series[0].yKey">
+        <option value="revenue">Revenue</option><option value="profit">Profit</option>
+      </select>
+    </label>
+    <label class="grid gap-2 text-sm">Y display
+      <select class="select w-full" sx-model="config.axes.y.format.type">
+        <option value="number">Number</option><option value="currency">Currency (USD)</option>
+      </select>
+    </label>
+  </div>
+  <div class="h-80">
+    <div class="h-full w-full" sx-chart="rows" sx-chart-config="config"></div>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <button type="button" class="btn" sx-on:click="saved = JSON.stringify(config)">Save snapshot</button>
+    <button type="button" class="btn-outline" sx-bind:disabled="!saved" sx-on:click="config = JSON.parse(saved)">Restore snapshot</button>
+  </div>
+  <pre class="max-h-72 overflow-auto rounded-lg bg-muted p-4 text-xs"><code sx-text="JSON.stringify(config, null, 2)"></code></pre>
+  <p class="text-sm text-muted-foreground">
+    Use <code>sx-chart-config</code> for a complete configuration including chart type. It takes precedence over <code>sx-chart-options</code>; an explicit <code>sx-chart-type</code> still overrides its type. Data stays in <code>sx-chart</code>.
+  </p>
+  <pre class="overflow-auto rounded-lg bg-muted p-4 text-xs"><code>{markup}</code></pre>
+  <pre class="overflow-auto rounded-lg bg-muted p-4 text-xs"><code>{api}</code></pre>
+  <p class="text-sm text-muted-foreground">
+    <code>setConfig</code> replaces all settings; <code>update</code> merges top-level settings, replacing supplied nested objects and arrays. <code>getConfig</code> returns a detached snapshot without the main dataset. Events bubble with <code>detail.config</code> after settings change, excluding data updates, resize, hover, and zoom. No event fires on initialization or an unchanged config. Axis <code>format</code> supports text, date, number, percent, and currency, with Intl <code>options</code>, chart <code>locale</code>, and <code>timeZone</code>. Percent values use fractions (0.5 becomes 50%). Series <code>format</code> also accepts these rules. Existing formatter callbacks still work in memory; use declarative rules when saving JSON. <code>tickFormat</code> overrides axis <code>format</code>. Set <code>axes.x.scaleType</code> to time for a continuous date axis; display format alone does not change the scale.
+  </p>
+</section>

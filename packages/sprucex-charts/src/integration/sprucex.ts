@@ -1,36 +1,58 @@
+import { cloneConfig, sameConfig } from "../runtime/config";
 import { createChart, getChartRuntime } from "../runtime/chart";
-import type { ChartOptions, SpruceXComponentLike, SpruceXLike } from "../types";
+import type {
+  ChartConfigChangeEvent,
+  ChartOptions,
+  SpruceXComponentLike,
+  SpruceXLike,
+} from "../types";
 
 interface ChartBinding {
   el: HTMLElement;
   dataExpr: string;
   typeExpr?: string;
   optionsExpr?: string;
+  configExpr?: string;
+  cleanup?: () => void;
   instance?: ReturnType<typeof createChart>;
-  signature?: string;
+  snapshot?: ChartOptions;
 }
 
 const bindingsByComponent = new WeakMap<SpruceXComponentLike, ChartBinding[]>();
 
-function evaluateConfig(component: SpruceXComponentLike, binding: ChartBinding): ChartOptions {
+function evaluateConfig(
+  component: SpruceXComponentLike,
+  binding: ChartBinding,
+): ChartOptions {
   const data = component.evaluateExpressionOrLiteral(binding.dataExpr);
-  const explicitType = binding.typeExpr ? component.evaluateExpressionOrLiteral(binding.typeExpr) : undefined;
-  const rawOptions = (binding.optionsExpr ? component.evaluateExpressionOrLiteral(binding.optionsExpr) : {}) as ChartOptions;
-  const { type: _ignoredType, data: _ignoredData, ...options } = typeof rawOptions === "object" && rawOptions ? rawOptions : {};
+  const explicitType = binding.typeExpr
+    ? component.evaluateExpressionOrLiteral(binding.typeExpr)
+    : undefined;
+  const rawConfig = binding.configExpr
+    ? (component.evaluateExpressionOrLiteral(
+        binding.configExpr,
+      ) as ChartOptions)
+    : undefined;
+  const rawOptions = (
+    binding.configExpr
+      ? rawConfig
+      : binding.optionsExpr
+        ? component.evaluateExpressionOrLiteral(binding.optionsExpr)
+        : {}
+  ) as ChartOptions;
+  const {
+    type: _ignoredType,
+    data: _ignoredData,
+    ...options
+  } = typeof rawOptions === "object" && rawOptions ? rawOptions : {};
   return {
     ...options,
-    data: Array.isArray(data) || (typeof data === "object" && data) ? (data as ChartOptions["data"]) : [],
-    type: (explicitType as ChartOptions["type"]) ?? "line",
+    data:
+      Array.isArray(data) || (typeof data === "object" && data)
+        ? (data as ChartOptions["data"])
+        : [],
+    type: (explicitType as ChartOptions["type"]) ?? rawConfig?.type ?? "line",
   };
-}
-
-function stableSignature(config: ChartOptions) {
-  return JSON.stringify(config, (_key, value) => {
-    if (typeof value === "function") return `[fn:${value.name || "anonymous"}]`;
-    if (value instanceof Set) return Array.from(value);
-    if (value instanceof Date) return value.toISOString();
-    return value;
-  });
 }
 
 export function registerSpruceXCharts(SpruceX: SpruceXLike) {
@@ -47,34 +69,64 @@ export function registerSpruceXCharts(SpruceX: SpruceXLike) {
         existing.dataExpr = dataExpr;
         existing.typeExpr = el.getAttribute("sx-chart-type") ?? undefined;
         existing.optionsExpr = el.getAttribute("sx-chart-options") ?? undefined;
+        existing.configExpr = el.getAttribute("sx-chart-config") ?? undefined;
       } else {
-        bindings.push({
+        const binding: ChartBinding = {
           el,
           dataExpr,
           typeExpr: el.getAttribute("sx-chart-type") ?? undefined,
           optionsExpr: el.getAttribute("sx-chart-options") ?? undefined,
-        });
+          configExpr: el.getAttribute("sx-chart-config") ?? undefined,
+        };
+        const onChange = (event: Event) => {
+          if (event.target !== el || !binding.configExpr) return;
+          const { config } = (event as CustomEvent<ChartConfigChangeEvent>)
+            .detail;
+          binding.snapshot = cloneConfig({
+            ...config,
+            data: component.evaluateExpressionOrLiteral(
+              binding.dataExpr,
+            ) as ChartOptions["data"],
+          });
+          component.assignStateValue(binding.configExpr, config);
+        };
+        el.addEventListener("sx-chart:configchange", onChange);
+        binding.cleanup = () =>
+          el.removeEventListener("sx-chart:configchange", onChange);
+        bindings.push(binding);
       }
       bindingsByComponent.set(component, bindings);
     },
     update(component) {
-      const bindings = (bindingsByComponent.get(component) ?? []).filter((binding) => binding.el.isConnected);
+      const bindings = (bindingsByComponent.get(component) ?? []).filter(
+        (binding) => {
+          if (binding.el.isConnected) return true;
+          binding.cleanup?.();
+          binding.instance?.destroy();
+          return false;
+        },
+      );
       bindingsByComponent.set(component, bindings);
       bindings.forEach((binding) => {
         const config = evaluateConfig(component, binding);
-        const signature = stableSignature(config);
-        if (binding.signature === signature) return;
-        binding.signature = signature;
+        if (sameConfig(binding.snapshot, config)) return;
+        binding.snapshot = cloneConfig(config);
         if (!binding.instance) {
           binding.instance = createChart(binding.el, config);
           return;
         }
-        binding.instance.update(config);
+        if (binding.configExpr) {
+          binding.instance.setData(config.data ?? []);
+          binding.instance.setConfig(config);
+        } else {
+          binding.instance.update(config);
+        }
       });
     },
     teardown(component) {
       const bindings = bindingsByComponent.get(component) ?? [];
       bindings.forEach((binding) => {
+        binding.cleanup?.();
         binding.instance?.destroy();
         const runtime = getChartRuntime(binding.el);
         runtime?.container.replaceChildren();

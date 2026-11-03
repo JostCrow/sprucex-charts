@@ -1,6 +1,7 @@
 ---
 import DocsPageShell from "../../components/DocsPageShell.astro";
 import BarContent from "../../components/page-content/bar.astro";
+import SmallBarContent from "../../components/page-content/bar_small.astro";
 import { requireDocPage } from "../../data/docs";
 
 const page = requireDocPage("bar");
@@ -8,4 +9,5 @@ const page = requireDocPage("bar");
 
 <DocsPageShell page={page}>
   <BarContent />
+  <SmallBarContent />
 </DocsPageShell>

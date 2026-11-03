@@ -1,3 +1,9 @@
+---
+import ConfigurableChartExample from "../ConfigurableChartExample.astro";
+---
+
+<ConfigurableChartExample />
+
 <div class="overflow-x-auto">
         <table class="table text-xs w-full">
           <thead>
@@ -1984,6 +1990,388 @@
             <tr data-setting-row>
               <td class="whitespace-normal">
                 <div>
+                  <code>sx-chart-options.trendlines</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>array&lt;object&gt;</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>[]</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Adds computed or fixed reference lines. Use target
+                  trendlines for targets, goals, quotas, and SLA markers.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.trendlines[].id</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>generated from index</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Stable identifier for DOM hooks and internal rendering.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.trendlines[].type</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>auto, target</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>auto</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  <code>auto</code> computes a best-fit line for supported
+                  cartesian series. <code>target</code> renders a fixed
+                  horizontal line at the provided value.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.trendlines[].seriesId</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>all visible supported series</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Limits an <code>auto</code> trendline to one series by
+                  matching the series id, name, or generated series key.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.trendlines[].value</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>required for target</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Numeric y value used by <code>target</code> trendlines.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.trendlines[].label</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>formatted value</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Optional label shown near the line. This is where you name a
+                  line <code>Target</code>, <code>Goal</code>, or similar.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.trendlines[].color</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>theme foreground or muted color</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Overrides the rendered line and label color.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.trendlines[].strokeWidth</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>2</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Sets the rendered trendline stroke width.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.trendlines[].dashStyle</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>8 6 for target; solid for auto</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  SVG dash pattern applied to the line, such as
+                  <code>3 5</code>.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.trendlines[].axis</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>y, y2</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>y</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Chooses which vertical axis a target trendline should use.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.trendlines[].visible</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>boolean</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true, false</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>true</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Allows temporarily hiding a trendline without removing it.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.events</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>array&lt;object&gt;</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>[]</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Adds time-based event overlays. A single date renders a
+                  dashed vertical line; a start and end date render a shaded
+                  range.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.events[].id</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>generated from index</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Stable identifier for the rendered overlay.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.events[].label</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>hidden</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Optional text label shown above the event overlay.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.events[].date</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number | string | Date</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>unset</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Single event timestamp. Use this for launches, incidents, or
+                  release markers on a time axis.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.events[].startDate</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number | string | Date</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>falls back to date</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Range start for the overlay window. Pair it with
+                  <code>endDate</code>.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.events[].endDate</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number | string | Date</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>falls back to date</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Range end for the overlay window. When start and end resolve
+                  to the same point, the overlay collapses into a single line.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.events[].color</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>theme palette or foreground</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Overrides the event line or range fill color.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.events[].textColor</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>string</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>same as color</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>Overrides the label color for the event marker.</div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
+                  <code>sx-chart-options.events[].opacity</code>
+                </div>
+              </td>
+              <td class="whitespace-normal">
+                <div>number</div>
+              </td>
+              <td class="whitespace-normal">-</td>
+              <td class="whitespace-normal">
+                <div>0.12 for ranges</div>
+              </td>
+              <td class="whitespace-normal">
+                <div>
+                  Sets the fill opacity for shaded range events. Single-line
+                  events ignore this value.
+                </div>
+              </td>
+            </tr>
+            <tr data-setting-row>
+              <td class="whitespace-normal">
+                <div>
                   <code>sx-chart-options.locale</code>
                 </div>
               </td>
@@ -2034,8 +2422,9 @@
               </td>
               <td class="whitespace-normal">
                 <div>
-                  Re-renders the chart on window resize. Set false if you want
-                  to manage resize calls manually.
+                  Re-renders the chart when the window, chart element, or parent
+                  container resizes. Set false if you want to manage resize
+                  calls manually.
                 </div>
               </td>
             </tr>
@@ -2198,10 +2587,14 @@
               </td>
               <td class="whitespace-normal">-</td>
               <td class="whitespace-normal">
-                <div>460</div>
+                <div>measured container height, fallback 460</div>
               </td>
               <td class="whitespace-normal">
-                <div>Explicit chart height in pixels.</div>
+                <div>
+                  Explicit chart height in pixels. When omitted, the chart uses
+                  the measured element height, then the parent height if needed,
+                  with a 460px fallback when neither is available.
+                </div>
               </td>
             </tr>
             <tr data-setting-row>

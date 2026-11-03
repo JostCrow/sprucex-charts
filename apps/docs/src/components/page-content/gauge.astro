@@ -8,6 +8,7 @@ const data = [
 ];
 const options = {
   "title": "System Health",
+  "subtitle": "Gauge charts can use target trendlines as goal markers.",
   "series": [
     {
       "id": "gauge",
@@ -20,7 +21,15 @@ const options = {
       "min": 0,
       "max": 100
     }
-  }
+  },
+  "trendlines": [
+    {
+      "id": "goal",
+      "type": "target",
+      "value": 95,
+      "label": "Goal"
+    }
+  ]
 };
 ---
 

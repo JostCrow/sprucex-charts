@@ -4,15 +4,15 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "prepare:vendor": "cp ../../packages/sprucex-charts/dist/sprucex-charts.js public/vendor/sprucex-charts.js",
+    "prepare:vendor": "mkdir -p public/vendor/basecoat && cp ../../packages/sprucex-charts/dist/sprucex-charts.js public/vendor/sprucex-charts.js && cp ../../node_modules/basecoat-css/dist/js/basecoat.min.js public/vendor/basecoat/basecoat.min.js && cp ../../node_modules/basecoat-css/dist/js/sidebar.min.js public/vendor/basecoat/sidebar.min.js",
     "dev": "npm run prepare:vendor && astro dev",
     "build": "npm run prepare:vendor && astro build",
     "preview": "npm run prepare:vendor && astro preview",
     "test": "vitest run --passWithNoTests",
-    "lint": "npm run build --workspace=@sprucex-charts/core && npm run prepare:vendor && tsc --noEmit -p tsconfig.json"
+    "lint": "npm run build --workspace=sprucex-charts && npm run prepare:vendor && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@sprucex-charts/core": "0.1.0",
+    "sprucex-charts": "0.2.0",
     "@tailwindcss/vite": "^4.2.2",
     "basecoat-css": "^0.3.11",
     "sprucex": "^1.0.0",

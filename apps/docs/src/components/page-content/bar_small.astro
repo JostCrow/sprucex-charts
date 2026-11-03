@@ -1,0 +1,19 @@
+---
+import StaticChartExample from "../StaticChartExample.astro";
+
+const data = [
+  { "x": "2013-07-02", "value": 2.0 },
+  { "x": "2013-07-03", "value": 1.0 },
+  { "x": "2013-07-04", "value": 1.0 },
+  { "x": "2013-07-07", "value": 1.0 },
+  { "x": "2013-07-12", "value": 1.0 },
+  { "x": "2013-07-20", "value": 1.0 }
+];
+
+const options = {
+  subtitle: "Sparse daily counts keep one bucket per day across the full range.",
+  series: [{ "id": "value", "name": "Amount of invoices per day", "yKey": "value" }],
+};
+---
+
+<StaticChartExample chartType="bar" data={data} options={options} />

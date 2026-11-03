@@ -32,16 +32,27 @@ import '../styles.css';
         }
       })();
     </script>
+    <script defer src="/vendor/basecoat/basecoat.min.js"></script>
+    <script defer src="/vendor/basecoat/sidebar.min.js"></script>
     <script defer src="/vendor/sprucex.js"></script>
     <script defer src="/vendor/sprucex-charts.js"></script>
   </head>
   <body sx-page>
     <div
-      class="min-h-screen bg-background text-foreground md:grid md:grid-cols-[15rem_minmax(0,1fr)]"
+      class="min-h-screen bg-background text-foreground"
       sx-data="docsPage"
     >
       <DocsSidebar currentFile={page.slug} />
       <main {...(page.mainAttributes ?? {})} class="px-6 py-8 md:px-16 md:py-12 flex flex-col gap-4">
+        <button
+          type="button"
+          class="btn-outline w-fit"
+          aria-controls="docs-sidebar"
+          aria-label="Toggle navigation"
+          onclick="document.dispatchEvent(new CustomEvent('basecoat:sidebar', { detail: { id: 'docs-sidebar' } }))"
+        >
+          Navigation
+        </button>
         <DocsPageHeader page={page} />
         <slot />
       </main>
@@ -50,6 +61,18 @@ import '../styles.css';
       (() => {
         const key = "darkMode";
         const root = document.documentElement;
+        const reinitSidebar = () => {
+          if (window.basecoat && typeof window.basecoat.init === "function") {
+            window.basecoat.init("sidebar");
+          }
+        };
+        const bindSidebarLifecycle = () => {
+          if (window.__docsSidebarLifecycleBound) return;
+          window.__docsSidebarLifecycleBound = true;
+          document.addEventListener("sprucex:page-after", () => {
+            queueMicrotask(reinitSidebar);
+          });
+        };
         const persist = (isDark) => {
           try {
             localStorage.setItem(key, JSON.stringify({ darkMode: isDark }));
@@ -62,6 +85,8 @@ import '../styles.css';
           root.classList.toggle("dark", nextIsDark);
           persist(nextIsDark);
         });
+        bindSidebarLifecycle();
+        window.addEventListener("load", reinitSidebar, { once: true });
       })();
     </script>
   </body>

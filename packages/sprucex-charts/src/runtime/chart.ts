@@ -1,7 +1,9 @@
+import { configurationOf, sameConfig } from "./config";
 import { DEFAULT_PADDING, DEFAULT_THEME } from "../themes/defaults";
 import { resolveMapFeatureCollection } from "../maps";
 import type {
   AxisConfig,
+  ValueFormat,
   ChartEventConfig,
   ChartInstance,
   ChartOptions,
@@ -68,6 +70,7 @@ interface ChartRuntime {
   context: RenderContext | null;
   instance?: ChartInstance;
   destroyed: boolean;
+  syncCleanup?: () => void;
   teardownFns: Array<() => void>;
   clipPathId: string;
   animateOnNextRender: boolean;
@@ -107,6 +110,8 @@ interface LegendEntry {
   label: string;
   color: string;
 }
+
+type TemporalBucketUnit = "day" | "week" | "month" | "year";
 
 type AnimationPreset = "fade-up" | "grow-y" | "grow-x" | "pop" | "scale";
 
@@ -205,12 +210,51 @@ function quantileSorted(values: number[], q: number): number {
   return values[lower] * (1 - weight) + values[upper] * weight;
 }
 
+const ISO_DATE_PREFIX_PATTERN = /\d{4}-\d{2}-\d{2}/;
+const COMPACT_DATE_PATTERN = /^\d{8}$/;
+
+function parseCompactDateString(value: string): number | undefined {
+  if (!COMPACT_DATE_PATTERN.test(value)) return undefined;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(4, 6));
+  const day = Number(value.slice(6, 8));
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+    return undefined;
+  }
+  const parsed = Date.UTC(year, month - 1, day);
+  const date = new Date(parsed);
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return undefined;
+  }
+  return parsed;
+}
+
+function parseDateString(value: string): number | undefined {
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  const compact = parseCompactDateString(normalized);
+  if (compact != null) return compact;
+  if (!ISO_DATE_PREFIX_PATTERN.test(normalized)) return undefined;
+  const parsed = Date.parse(normalized);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+function isDateLikeValue(value: unknown): boolean {
+  if (value instanceof Date) return Number.isFinite(value.getTime());
+  if (typeof value === "string") return parseDateString(value) != null;
+  return false;
+}
+
 function toDateMs(value: unknown): number {
   if (value instanceof Date) return value.getTime();
   if (typeof value === "number") return value;
   if (typeof value === "string") {
-    const parsed = Date.parse(value);
-    if (!Number.isNaN(parsed)) return parsed;
+    const parsed = parseDateString(value);
+    if (parsed != null) return parsed;
     const numeric = Number(value);
     if (!Number.isNaN(numeric)) return numeric;
   }
@@ -225,8 +269,8 @@ function toOptionalDateMs(value: unknown): number | undefined {
   if (typeof value === "number")
     return Number.isFinite(value) ? value : undefined;
   if (typeof value === "string") {
-    const parsed = Date.parse(value);
-    if (!Number.isNaN(parsed)) return parsed;
+    const parsed = parseDateString(value);
+    if (parsed != null) return parsed;
     const numeric = Number(value);
     if (!Number.isNaN(numeric)) return numeric;
   }
@@ -239,8 +283,8 @@ function toNumber(value: unknown): number {
   if (typeof value === "string") {
     const numeric = Number(value);
     if (!Number.isNaN(numeric)) return numeric;
-    const parsed = Date.parse(value);
-    if (!Number.isNaN(parsed) && /\d{4}-\d{2}-\d{2}/.test(value)) return parsed;
+    const parsed = parseDateString(value);
+    if (parsed != null) return parsed;
   }
   return 0;
 }
@@ -252,6 +296,25 @@ function parseTickFormat(pattern: string, value: number): string {
     return `${(value * 100).toFixed(decimals)}%`;
   }
   return value.toFixed(decimals);
+}
+
+function formatDisplay(value: unknown, format: ValueFormat, locale: string, timeZone?: string): string {
+  if (format.type === "text") return String(value ?? "");
+  if (format.type === "date") {
+    const timestamp = toOptionalDateMs(value);
+    if (timestamp == null) return String(value ?? "");
+    return new Intl.DateTimeFormat(locale, {
+      timeZone, ...(format.options ?? { month: "short", day: "numeric", year: "numeric" }),
+    }).format(new Date(timestamp));
+  }
+  const numeric = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN;
+  if (!Number.isFinite(numeric)) return String(value ?? "");
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 2,
+    ...format.options,
+    style: format.type === "currency" ? "currency" : format.type === "percent" ? "percent" : "decimal",
+    ...(format.type === "currency" ? { currency: format.currency } : {}),
+  }).format(numeric);
 }
 
 function formatValue(
@@ -266,18 +329,21 @@ function formatValue(
   if (typeof axis?.tickFormat === "string" && typeof value === "number") {
     return parseTickFormat(axis.tickFormat, value);
   }
+  if (axis?.format) return formatDisplay(value, axis.format, locale, timeZone);
   if (
+    axis?.scaleType === "time" ||
     value instanceof Date ||
-    (typeof value === "string" &&
-      !Number.isNaN(Date.parse(value)) &&
-      /\d{4}-\d{2}-\d{2}/.test(value))
+    (typeof value === "string" && parseDateString(value) != null)
   ) {
+    const parsedValue =
+      value instanceof Date ? value : new Date(toOptionalDateMs(value) ?? NaN);
+    if (!Number.isFinite(parsedValue.getTime())) return String(value ?? "");
     return new Intl.DateTimeFormat(locale, {
       month: "short",
       day: "numeric",
       year: "numeric",
       timeZone,
-    }).format(value instanceof Date ? value : new Date(value));
+    }).format(parsedValue);
   }
   if (typeof value === "number") {
     return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(
@@ -294,7 +360,9 @@ function formatSeriesValue(
   config: ChartOptions,
 ) {
   if (series?.format) {
-    return series.format(value);
+    return typeof series.format === "function"
+      ? series.format(value)
+      : formatDisplay(value, series.format, config.locale ?? "en-US", config.timeZone);
   }
   return formatValue(value, axis, config.locale, config.timeZone);
 }
@@ -322,7 +390,10 @@ function resolvePadding(config: ChartOptions) {
     typeof config.padding === "object" &&
     !Array.isArray(config.padding)
   ) {
-    return { ...DEFAULT_PADDING, ...(config.padding as Partial<typeof DEFAULT_PADDING>) };
+    return {
+      ...DEFAULT_PADDING,
+      ...(config.padding as Partial<typeof DEFAULT_PADDING>),
+    };
   }
 
   return DEFAULT_PADDING;
@@ -371,15 +442,95 @@ function mapValueColor(
   return series.color ?? palette[0] ?? "var(--chart-1)";
 }
 
+function mapLookupText(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  const text = String(value).trim();
+  return text ? text : undefined;
+}
+
+function normalizeMapLookupKey(value: unknown): string | undefined {
+  const text = mapLookupText(value);
+  if (!text) return undefined;
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+function getMapLookupKeys(...values: unknown[]): string[] {
+  const keys = new Set<string>();
+  for (const value of values) {
+    const raw = mapLookupText(value);
+    if (raw) keys.add(raw);
+    const normalized = normalizeMapLookupKey(value);
+    if (normalized) keys.add(normalized);
+  }
+  return Array.from(keys);
+}
+
+function setMapLookupEntry<T>(
+  lookup: Map<string, T>,
+  value: unknown,
+  entry: T,
+): void {
+  for (const key of getMapLookupKeys(value)) {
+    lookup.set(key, entry);
+  }
+}
+
+function getMapLookupEntry<T>(
+  lookup: Map<string, T>,
+  ...values: unknown[]
+): T | undefined {
+  for (const key of getMapLookupKeys(...values)) {
+    if (lookup.has(key)) {
+      return lookup.get(key);
+    }
+  }
+  return undefined;
+}
+
+function getMapFeatureLookupKeys(feature: AnyDatum, index: number): string[] {
+  const properties =
+    feature.properties && typeof feature.properties === "object"
+      ? (feature.properties as Record<string, unknown>)
+      : undefined;
+  return getMapLookupKeys(
+    feature.id,
+    properties?.name,
+    properties?.id,
+    properties?.iso2,
+    index,
+  );
+}
+
 function seriesKey(series: SeriesConfig, index: number): string {
   return seriesId(series, index);
 }
 
+const DEFAULT_CHART_WIDTH = 820;
+const DEFAULT_CHART_HEIGHT = 460;
+const MIN_CHART_WIDTH = 320;
+
+function roundDimension(value: number | undefined): number {
+  return Number.isFinite(value) && (value ?? 0) > 0
+    ? Math.round(value ?? 0)
+    : 0;
+}
+
 function getSize(container: HTMLElement, config: ChartOptions) {
   const rect = container.getBoundingClientRect();
+  const parentRect = container.parentElement?.getBoundingClientRect();
+  const measuredWidth =
+    roundDimension(rect.width) || roundDimension(parentRect?.width);
+  const measuredHeight =
+    roundDimension(rect.height) || roundDimension(parentRect?.height);
   return {
-    width: config.width ?? Math.max(320, Math.round(rect.width || 820)),
-    height: config.height ?? 460,
+    width:
+      config.width ??
+      Math.max(MIN_CHART_WIDTH, measuredWidth || DEFAULT_CHART_WIDTH),
+    height: config.height ?? (measuredHeight || DEFAULT_CHART_HEIGHT),
   };
 }
 
@@ -433,7 +584,7 @@ function appendStyles(container: HTMLElement) {
   const style = document.createElement("style");
   style.dataset.sxChart = "true";
   style.textContent = `
-    .sx-chart-root { position: relative; width: 100%; }
+    .sx-chart-root { position: relative; width: 100%; height: 100%; }
     .sx-chart-svg { display: block; width: 100%; height: auto; font-family: "IBM Plex Sans", "Segoe UI", sans-serif; }
     .sx-chart-tooltip {
       position: absolute;
@@ -471,18 +622,22 @@ function appendStyles(container: HTMLElement) {
 
 function resolveScaleType(
   axis: AxisConfig | undefined,
-  sampleValue: unknown,
+  sampleValue: unknown | unknown[],
 ): AxisConfig["scaleType"] {
   if (axis?.scaleType) return axis.scaleType;
-  if (sampleValue instanceof Date) return "time";
-  if (
-    typeof sampleValue === "string" &&
-    !Number.isNaN(Date.parse(sampleValue)) &&
-    /\d{4}-\d{2}-\d{2}/.test(sampleValue)
-  ) {
+  const values = Array.isArray(sampleValue) ? sampleValue : [sampleValue];
+  const presentValues = values.filter((value) => value != null && value !== "");
+  if (presentValues.length && presentValues.every(isDateLikeValue)) {
     return "time";
   }
-  return typeof sampleValue === "number" ? "linear" : "category";
+  const fallbackValue = presentValues[0];
+  if (fallbackValue instanceof Date) return "time";
+  return typeof fallbackValue === "number" ? "linear" : "category";
+}
+
+function collectXValues(data: AnyDatum[], visibleSeries: SeriesConfig[]) {
+  const xKeys = unique(visibleSeries.map((series) => series.xKey ?? "x"));
+  return data.flatMap((datum) => xKeys.map((xKey) => datum[xKey]));
 }
 
 function createLinearScale(
@@ -523,7 +678,8 @@ function createLogScale(
   const logMax = Math.log10(safeMax);
   const scale = (value: number) => {
     const safeValue = Math.max(safeMin, value);
-    const ratio = (Math.log10(safeValue) - logMin) / Math.max(0.0001, logMax - logMin);
+    const ratio =
+      (Math.log10(safeValue) - logMin) / Math.max(0.0001, logMax - logMin);
     return rangeMin + ratio * (rangeMax - rangeMin);
   };
   const invert = (coord: number) => {
@@ -563,6 +719,262 @@ function createBandScale(
   };
 }
 
+function createContinuousSlotLayout(
+  values: unknown[],
+  xScaleType: AxisConfig["scaleType"],
+  xToCoord: (value: unknown) => number,
+  plotX: number,
+  plotWidth: number,
+  padding = 0.18,
+) {
+  if (xScaleType === "category") return [];
+  const plotRight = plotX + plotWidth;
+  const centers = values.map((value) => xToCoord(value));
+  return centers.map((center, index) => {
+    const previous = centers[index - 1];
+    const next = centers[index + 1];
+    const leftGap =
+      previous == null
+        ? next == null
+          ? plotWidth
+          : next - center
+        : center - previous;
+    const rightGap =
+      next == null
+        ? previous == null
+          ? plotWidth
+          : center - previous
+        : next - center;
+    let slotStart = center - leftGap / 2;
+    let slotEnd = center + rightGap / 2;
+    const slotWidth = Math.max(1, slotEnd - slotStart);
+    if (slotStart < plotX) {
+      slotEnd += plotX - slotStart;
+      slotStart = plotX;
+    } else if (slotEnd > plotRight) {
+      slotStart -= slotEnd - plotRight;
+      slotEnd = plotRight;
+    }
+    const bandWidth = Math.max(1, slotWidth * (1 - padding));
+    return {
+      center,
+      start: slotStart + (slotWidth - bandWidth) / 2,
+      width: bandWidth,
+    };
+  });
+}
+
+const MAX_AUTO_VERTICAL_BAR_WIDTH = 42;
+
+function resolveVerticalBarWidth(
+  availableWidth: number,
+  explicitBarWidth?: number,
+) {
+  const autoWidth = Math.min(availableWidth, MAX_AUTO_VERTICAL_BAR_WIDTH);
+  return Math.max(6, Math.min(availableWidth, explicitBarWidth ?? autoWidth));
+}
+
+function startOfLocalDay(value: number) {
+  const date = new Date(value);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+}
+
+function startOfLocalWeek(value: number) {
+  const date = new Date(startOfLocalDay(value));
+  const offset = (date.getDay() + 6) % 7;
+  date.setDate(date.getDate() - offset);
+  return date.getTime();
+}
+
+function startOfLocalMonth(value: number) {
+  const date = new Date(value);
+  return new Date(date.getFullYear(), date.getMonth(), 1).getTime();
+}
+
+function startOfLocalYear(value: number) {
+  const date = new Date(value);
+  return new Date(date.getFullYear(), 0, 1).getTime();
+}
+
+function startOfTemporalBucket(value: number, unit: TemporalBucketUnit) {
+  if (unit === "week") return startOfLocalWeek(value);
+  if (unit === "month") return startOfLocalMonth(value);
+  if (unit === "year") return startOfLocalYear(value);
+  return startOfLocalDay(value);
+}
+
+function addTemporalBucket(value: number, unit: TemporalBucketUnit, amount = 1) {
+  const date = new Date(value);
+  if (unit === "day") {
+    date.setDate(date.getDate() + amount);
+    return startOfLocalDay(date.getTime());
+  }
+  if (unit === "week") {
+    date.setDate(date.getDate() + amount * 7);
+    return startOfLocalWeek(date.getTime());
+  }
+  if (unit === "month") {
+    date.setMonth(date.getMonth() + amount, 1);
+    return startOfLocalMonth(date.getTime());
+  }
+  date.setFullYear(date.getFullYear() + amount, 0, 1);
+  return startOfLocalYear(date.getTime());
+}
+
+function inferTemporalBucketUnit(values: number[]): TemporalBucketUnit {
+  const sorted = unique(values).sort((a, b) => a - b);
+  if (sorted.length < 2) return "day";
+  const differences = sorted
+    .slice(1)
+    .map((value, index) => value - sorted[index])
+    .filter((difference) => difference > 0);
+  const minDifference = minValue(differences);
+  const dayMs = 24 * 60 * 60 * 1000;
+  if (minDifference <= dayMs * 2) return "day";
+  if (minDifference <= dayMs * 10) return "week";
+  if (minDifference <= dayMs * 45) return "month";
+  return "year";
+}
+
+function bucketKeyForTemporalValue(value: unknown, unit: TemporalBucketUnit) {
+  return new Date(startOfTemporalBucket(toDateMs(value), unit)).toISOString();
+}
+
+function buildTemporalBucketRange(values: number[], unit: TemporalBucketUnit) {
+  if (!values.length) return [];
+  const start = startOfTemporalBucket(minValue(values), unit);
+  const end = startOfTemporalBucket(maxValue(values), unit);
+  const buckets: number[] = [];
+  let cursor = start;
+  let guard = 0;
+  while (cursor <= end && guard < 5000) {
+    buckets.push(cursor);
+    cursor = addTemporalBucket(cursor, unit);
+    guard += 1;
+  }
+  return buckets;
+}
+
+function normalizeTemporalBarData(data: AnyDatum[], visibleSeries: SeriesConfig[]) {
+  const xKeys = unique(visibleSeries.map((series) => series.xKey ?? "x"));
+  const values = data.map((datum) => toDateMs(datum[xKeys[0]]));
+  const unit = inferTemporalBucketUnit(values);
+  const buckets = buildTemporalBucketRange(values, unit);
+  const valueKeys = unique(
+    visibleSeries.map((series) => series.yKey ?? series.valueKey ?? "y"),
+  );
+  const bucketMap = new Map<number, AnyDatum>();
+
+  buckets.forEach((bucket) => {
+    const row: AnyDatum = {};
+    xKeys.forEach((xKey) => {
+      row[xKey] = new Date(bucket);
+    });
+    valueKeys.forEach((valueKey) => {
+      row[valueKey] = 0;
+    });
+    bucketMap.set(bucket, row);
+  });
+
+  data.forEach((datum) => {
+    const bucket = startOfTemporalBucket(toDateMs(datum[xKeys[0]]), unit);
+    const row = bucketMap.get(bucket);
+    if (!row) return;
+    valueKeys.forEach((valueKey) => {
+      row[valueKey] = toNumber(row[valueKey]) + toNumber(datum[valueKey]);
+    });
+  });
+
+  return {
+    data: buckets.map((bucket) => bucketMap.get(bucket) ?? {}),
+    bucketDates: buckets,
+    unit,
+  };
+}
+
+function valuesAreNonNegativeIntegers(values: number[]) {
+  return values.every(
+    (value) => Number.isFinite(value) && value >= 0 && Math.round(value) === value,
+  );
+}
+
+function niceIntegerStep(target: number) {
+  if (target <= 1) return 1;
+  const exponent = 10 ** Math.floor(Math.log10(target));
+  const scaled = target / exponent;
+  if (scaled <= 1) return exponent;
+  if (scaled <= 2) return exponent * 2;
+  if (scaled <= 5) return exponent * 5;
+  return exponent * 10;
+}
+
+function buildIntegerTicks(min: number, max: number, count: number) {
+  const lower = Math.floor(min);
+  const upper = Math.ceil(max);
+  if (upper <= lower) return [lower];
+  const step = niceIntegerStep((upper - lower) / Math.max(1, count - 1));
+  const ticks: number[] = [];
+  for (let value = lower; value <= upper; value += step) {
+    ticks.push(value);
+  }
+  if (ticks[ticks.length - 1] !== upper) ticks.push(upper);
+  return ticks;
+}
+
+function chartUsesContinuousVerticalBars(
+  type: ChartType,
+  visibleSeries: SeriesConfig[],
+) {
+  if (type === "bar" || type === "stacked-bar") return true;
+  if (type !== "combo" && type !== "multi-axis") return false;
+  return visibleSeries.some((series, index) => {
+    const effectiveType =
+      type === "combo"
+        ? (series.type ?? (index % 2 === 0 ? "bar" : "line"))
+        : (series.type ?? "line");
+    return effectiveType === "bar";
+  });
+}
+
+function continuousDomainPadding(
+  values: number[],
+  scaleType: AxisConfig["scaleType"],
+) {
+  const sorted = unique(values.map((value) => Number(value))).sort(
+    (a, b) => a - b,
+  );
+  if (sorted.length > 1) {
+    return {
+      min: Math.max(1, (sorted[1] - sorted[0]) / 2),
+      max: Math.max(
+        1,
+        (sorted[sorted.length - 1] - sorted[sorted.length - 2]) / 2,
+      ),
+    };
+  }
+  const fallback = scaleType === "time" ? 12 * 60 * 60 * 1000 : 0.5;
+  return { min: fallback, max: fallback };
+}
+
+function startOfUtcWeek(date: Date) {
+  const result = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+  const offset = (result.getUTCDay() + 6) % 7;
+  result.setUTCDate(result.getUTCDate() - offset);
+  return result.getTime();
+}
+
+function timeTickBucket(date: Date, mode: "day" | "week" | "month") {
+  if (mode === "month") {
+    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+  }
+  if (mode === "week") {
+    return startOfUtcWeek(date);
+  }
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
 function createTimeTicks(minMs: number, maxMs: number, count = 6): Date[] {
   if (count <= 1) return [new Date(minMs), new Date(maxMs)];
   const span = Math.max(1, maxMs - minMs);
@@ -570,6 +982,8 @@ function createTimeTicks(minMs: number, maxMs: number, count = 6): Date[] {
   const weekMs = dayMs * 7;
   const monthThreshold = dayMs * 45;
   const yearThreshold = dayMs * 370;
+  const mode: "day" | "week" | "month" =
+    span <= monthThreshold ? "day" : span <= yearThreshold ? "week" : "month";
   const ticks: Date[] = [];
 
   if (span <= monthThreshold) {
@@ -608,10 +1022,31 @@ function createTimeTicks(minMs: number, maxMs: number, count = 6): Date[] {
     }
   }
 
-  if (!ticks.length || ticks[0].getTime() !== minMs)
-    ticks.unshift(new Date(minMs));
-  if (ticks[ticks.length - 1].getTime() !== maxMs) ticks.push(new Date(maxMs));
-  return buildTicks(ticks, count);
+  const visibleTicks = ticks.filter(
+    (tick) => tick.getTime() >= minMs && tick.getTime() <= maxMs,
+  );
+  const minDate = new Date(minMs);
+  const maxDate = new Date(maxMs);
+  if (
+    !visibleTicks.length ||
+    timeTickBucket(visibleTicks[0], mode) !== timeTickBucket(minDate, mode)
+  ) {
+    visibleTicks.unshift(minDate);
+  }
+  if (
+    !visibleTicks.length ||
+    timeTickBucket(visibleTicks[visibleTicks.length - 1], mode) !==
+      timeTickBucket(maxDate, mode)
+  ) {
+    visibleTicks.push(maxDate);
+  }
+  return buildTicks(
+    visibleTicks.filter(
+      (tick, index, values) =>
+        index === 0 || tick.getTime() !== values[index - 1].getTime(),
+    ),
+    count,
+  );
 }
 
 function buildTicks<T>(values: T[], count = 6): T[] {
@@ -660,6 +1095,19 @@ function rotatedLabelWidth(
       return Math.abs(width * cosine) + Math.abs(height * sine);
     }),
   );
+}
+
+function xAxisTextAnchor(
+  x: number,
+  plotX: number,
+  plotWidth: number,
+  rotation = 0,
+) {
+  if (x <= plotX + 1) return "start";
+  if (x >= plotX + plotWidth - 1) return "end";
+  if (rotation > 0) return "start";
+  if (rotation < 0) return "end";
+  return "middle";
 }
 
 function estimateAxisReserve(
@@ -783,19 +1231,59 @@ function runRenderAnimations(runtime: ChartRuntime) {
   });
 }
 
-function linePath(points: Point[]): string {
-  if (!points.length) return "";
+function linePathSegments(
+  points: Point[],
+  mode: SeriesConfig["lineMode"] = "straight",
+) {
+  if (points.length < 2) return "";
   return points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .slice(1)
+    .map((point, index) => {
+      const previous = points[index];
+      if (mode === "stepped") {
+        return `H ${point.x} V ${point.y}`;
+      }
+      if (mode === "smooth") {
+        const curve = (point.x - previous.x) * 0.5;
+        return `C ${previous.x + curve} ${previous.y}, ${point.x - curve} ${point.y}, ${point.x} ${point.y}`;
+      }
+      return `L ${point.x} ${point.y}`;
+    })
     .join(" ");
 }
 
-function areaPath(points: Point[], baselineY: number): string {
+function linePath(
+  points: Point[],
+  mode: SeriesConfig["lineMode"] = "straight",
+): string {
   if (!points.length) return "";
-  const top = linePath(points);
-  const reversed = [...points].reverse();
-  const bottom = reversed.map((point) => `L ${point.x} ${baselineY}`).join(" ");
-  return `${top} ${bottom} Z`;
+  const segments = linePathSegments(points, mode);
+  return `M ${points[0].x} ${points[0].y}${segments ? ` ${segments}` : ""}`;
+}
+
+function areaPath(
+  points: Point[],
+  baselineY: number,
+  mode: SeriesConfig["lineMode"] = "straight",
+): string {
+  if (!points.length) return "";
+  const top = linePath(points, mode);
+  const first = points[0];
+  const last = points[points.length - 1];
+  return `${top} L ${last.x} ${baselineY} L ${first.x} ${baselineY} Z`;
+}
+
+function closedAreaPath(
+  topPoints: Point[],
+  bottomPoints: Point[],
+  mode: SeriesConfig["lineMode"] = "straight",
+) {
+  if (!topPoints.length || !bottomPoints.length) return "";
+  const top = linePath(topPoints, mode);
+  const reversedBottom = [...bottomPoints].reverse();
+  const bottomStart = reversedBottom[0];
+  const bottomSegments = linePathSegments(reversedBottom, mode);
+  return `${top} L ${bottomStart.x} ${bottomStart.y}${bottomSegments ? ` ${bottomSegments}` : ""} Z`;
 }
 
 function arcPath(
@@ -1426,9 +1914,10 @@ function renderAxes({
       ? xTicks
           .map((tick) => {
             const x = xToCoord(tick);
+            const anchor = xAxisTextAnchor(x, plotX, plotWidth, xRotation);
             return `<g transform="translate(${x}, ${plotY + plotHeight})">
         <line y2="6" stroke="${theme.axis}" />
-        <text y="${xRotation ? 16 : 22}" text-anchor="${xRotation > 0 ? "start" : xRotation < 0 ? "end" : "middle"}" fill="${theme.muted}" font-size="11"${xRotation ? ` transform="rotate(${xRotation})"` : ""}>${escapeHtml(formatValue(tick, yAxis, config.locale, config.timeZone))}</text>
+        <text y="${xRotation ? 16 : 22}" text-anchor="${anchor}" fill="${theme.muted}" font-size="11"${xRotation ? ` transform="rotate(${xRotation})"` : ""}>${escapeHtml(formatValue(tick, yAxis, config.locale, config.timeZone))}</text>
       </g>`;
           })
           .join("")
@@ -1483,9 +1972,10 @@ function renderAxes({
     ? xTicks
         .map((tick) => {
           const x = xToCoord(tick);
+          const anchor = xAxisTextAnchor(x, plotX, plotWidth, xRotation);
           return `<g transform="translate(${x}, ${plotY + plotHeight})">
       <line y2="6" stroke="${theme.axis}" />
-      <text y="${xRotation ? 16 : 22}" text-anchor="${xRotation > 0 ? "start" : xRotation < 0 ? "end" : "middle"}" fill="${theme.muted}" font-size="11"${xRotation ? ` transform="rotate(${xRotation})"` : ""}>${escapeHtml(formatValue(tick, xAxis, config.locale, config.timeZone))}</text>
+      <text y="${xRotation ? 16 : 22}" text-anchor="${anchor}" fill="${theme.muted}" font-size="11"${xRotation ? ` transform="rotate(${xRotation})"` : ""}>${escapeHtml(formatValue(tick, xAxis, config.locale, config.timeZone))}</text>
     </g>`;
         })
         .join("")
@@ -1541,7 +2031,9 @@ function resolveLegendPosition(config: ChartOptions) {
 }
 
 function legendItemLabel(config: ChartOptions, label: string) {
-  return config.legend?.labelFormatter ? config.legend.labelFormatter(label) : label;
+  return config.legend?.labelFormatter
+    ? config.legend.labelFormatter(label)
+    : label;
 }
 
 function renderLegendMarker(
@@ -1559,7 +2051,11 @@ function renderLegendMarker(
 }
 
 function estimateLegendItemWidth(config: ChartOptions, label: string) {
-  return 34 + legendItemLabel(config, label).length * 7 + (config.legend?.itemSpacing ?? 18);
+  return (
+    34 +
+    legendItemLabel(config, label).length * 7 +
+    (config.legend?.itemSpacing ?? 18)
+  );
 }
 
 function buildLegendRows(
@@ -1610,7 +2106,8 @@ function legendBlockHeight(
     return 0;
   }
   const rows = buildLegendRows(legendEntries, config, availableWidth);
-  const pageable = (config.legend?.pagination || config.legend?.scroll) && rows.length > 1;
+  const pageable =
+    (config.legend?.pagination || config.legend?.scroll) && rows.length > 1;
   return (pageable ? 58 : 18) + Math.max(1, pageable ? 1 : rows.length) * 22;
 }
 
@@ -1626,7 +2123,10 @@ function legendBlockWidth(
   return Math.max(
     120,
     ...rows.map((row) =>
-      row.reduce((total, entry) => total + estimateLegendItemWidth(config, entry.label), 0),
+      row.reduce(
+        (total, entry) => total + estimateLegendItemWidth(config, entry.label),
+        0,
+      ),
     ),
   );
 }
@@ -1643,7 +2143,8 @@ function renderLegend(
   const itemSpacing = config.legend?.itemSpacing ?? 18;
   const alignment = config.legend?.alignment ?? "start";
   const shape = config.legend?.itemShape ?? "dot";
-  const pageable = (config.legend?.pagination || config.legend?.scroll) && rows.length > 1;
+  const pageable =
+    (config.legend?.pagination || config.legend?.scroll) && rows.length > 1;
   const page = pageable ? clamp(runtime.legendPage, 0, rows.length - 1) : 0;
   runtime.legendPage = page;
   const visibleRows = pageable ? rows.slice(page, page + 1) : rows;
@@ -1677,9 +2178,8 @@ function renderLegend(
     })
     .join("");
 
-  const controls =
-    pageable
-      ? `<g class="sx-legend-pagination" transform="translate(16, 18)">
+  const controls = pageable
+    ? `<g class="sx-legend-pagination" transform="translate(16, 18)">
       <g data-sx-legend-page="prev" role="button" tabindex="0" aria-label="Previous legend page">
         <rect x="0" y="-11" width="22" height="18" rx="5" fill="transparent" stroke="${theme.axis}" />
         <path d="M 14 -6 L 8 -2 L 14 2" fill="none" stroke="${theme.foreground}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -1690,7 +2190,7 @@ function renderLegend(
         <path d="M 8 -6 L 14 -2 L 8 2" fill="none" stroke="${theme.foreground}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
       </g>
     </g>`
-      : "";
+    : "";
 
   return `${controls}<g transform="translate(0, ${pageable ? 18 : 0})">${rowMarkup}</g>`;
 }
@@ -2059,7 +2559,12 @@ function createNumericAxisScale(
   rangeMax: number,
 ) {
   if (axis?.scaleType === "log") {
-    return createLogScale(Math.max(0.0001, min), Math.max(min * 10, max), rangeMin, rangeMax);
+    return createLogScale(
+      Math.max(0.0001, min),
+      Math.max(min * 10, max),
+      rangeMin,
+      rangeMax,
+    );
   }
   return createLinearScale(min, max, rangeMin, rangeMax);
 }
@@ -2144,22 +2649,21 @@ function renderPieFamily(
         series,
         color,
       });
-      const labelMarkup =
-        series?.labels
-          ? renderDataLabel(
-              point.x,
-              point.y,
-              formatSeriesValue(
-                slice.datum[valueKey],
-                series,
-                config.axes?.y,
-                config,
-              ),
-              {
-                fill: ctx.theme.background ?? "#ffffff",
-              },
-            )
-          : "";
+      const labelMarkup = series?.labels
+        ? renderDataLabel(
+            point.x,
+            point.y,
+            formatSeriesValue(
+              slice.datum[valueKey],
+              series,
+              config.axes?.y,
+              config,
+            ),
+            {
+              fill: ctx.theme.background ?? "#ffffff",
+            },
+          )
+        : "";
       return wrapAnimatedMarkup(
         runtime,
         `<path d="${donutSectorPath(centerX, centerY, innerRadius, outerRadius, slice.startAngle, slice.endAngle)}" fill="${color}" stroke="${ctx.theme.background}" stroke-width="2" data-sx-chart-key="${escapeHtml(label)}" />${labelMarkup}`,
@@ -2279,12 +2783,7 @@ function renderGauge(
     valueAngle,
   );
   const tickCount = 5;
-  const valueText = formatSeriesValue(
-    value,
-    series,
-    config.axes?.y,
-    config,
-  );
+  const valueText = formatSeriesValue(value, series, config.axes?.y, config);
   const anchorForAngle = (angle: number) => {
     const cosine = Math.cos(angle);
     if (cosine > 0.35) return "start";
@@ -2325,7 +2824,12 @@ function renderGauge(
         1,
       );
       const angle = startAngle + (endAngle - startAngle) * targetRatio;
-      const outer = polarToCartesian(centerX, centerY, radius + trackWidth, angle);
+      const outer = polarToCartesian(
+        centerX,
+        centerY,
+        radius + trackWidth,
+        angle,
+      );
       const inner = polarToCartesian(
         centerX,
         centerY,
@@ -2355,8 +2859,18 @@ function renderGauge(
     raw: data[0] ?? {},
     series,
   });
-  const startLabel = polarToCartesian(centerX, centerY, radius + trackWidth * 0.95, startAngle);
-  const endLabel = polarToCartesian(centerX, centerY, radius + trackWidth * 0.95, endAngle);
+  const startLabel = polarToCartesian(
+    centerX,
+    centerY,
+    radius + trackWidth * 0.95,
+    startAngle,
+  );
+  const endLabel = polarToCartesian(
+    centerX,
+    centerY,
+    radius + trackWidth * 0.95,
+    endAngle,
+  );
   const capPoint = polarToCartesian(centerX, centerY, radius, valueAngle);
   const centerCardY = centerY - radius * 0.34;
   return wrapAnimatedMarkup(
@@ -2784,9 +3298,11 @@ function renderMap(
   );
   const valueKey = config.map?.valueKey ?? series.valueKey ?? "value";
   const labelKey = series.xKey ?? "id";
-  const values = new Map(
-    data.map((datum) => [String(datum[labelKey] ?? datum.name ?? ""), datum]),
-  );
+  const values = new Map<string, AnyDatum>();
+  data.forEach((datum) => {
+    setMapLookupEntry(values, datum[labelKey], datum);
+    setMapLookupEntry(values, datum.name, datum);
+  });
   const max = maxValue(data.map((datum) => toNumber(datum[valueKey]))) || 1;
   const featureCenters = new Map<string, Point>();
   const regionMarkup = features
@@ -2798,8 +3314,7 @@ function renderMap(
           index,
       );
       const datum =
-        values.get(id) ??
-        values.get(String(feature.properties?.name ?? "")) ??
+        getMapLookupEntry(values, ...getMapFeatureLookupKeys(feature, index)) ??
         feature.properties ??
         {};
       const value = toNumber(datum[valueKey]);
@@ -2808,9 +3323,8 @@ function renderMap(
         x: ctx.padding.left + ctx.plotWidth / 2,
         y: ctx.padding.top + ctx.plotHeight / 2,
       });
-      featureCenters.set(id, center);
-      if (feature.properties?.name) {
-        featureCenters.set(String(feature.properties.name), center);
+      for (const key of getMapFeatureLookupKeys(feature, index)) {
+        featureCenters.set(key, center);
       }
       const isHovered = String(runtime.state.hoveredKey ?? "") === id;
       const fillColor = mapValueColor(value, ctx.theme, series);
@@ -2827,12 +3341,7 @@ function renderMap(
         y: center.y,
         key: id,
         label: String(feature.properties?.name ?? id),
-        value: formatSeriesValue(
-          value,
-          series,
-          config.axes?.y,
-          config,
-        ),
+        value: formatSeriesValue(value, series, config.axes?.y, config),
         raw: datum,
         series,
         color: fillColor,
@@ -2846,51 +3355,55 @@ function renderMap(
     .join("");
 
   const pointRadius = Math.max(2, config.map?.pointRadius ?? 6);
-  const pointMarkup =
-    config.map?.pointKey
-      ? data
-          .map((datum, index) => {
-            const source = datum[config.map!.pointKey!];
-            let point: Point | undefined;
-            if (Array.isArray(source) && source.length >= 2) {
-              point = transform(toNumber(source[0]), toNumber(source[1]));
-            } else if (source && typeof source === "object") {
-              const candidate = source as Record<string, unknown>;
-              const lon = candidate.lon ?? candidate.lng ?? candidate.longitude;
-              const lat = candidate.lat ?? candidate.latitude;
-              if (lon != null && lat != null) {
-                point = transform(toNumber(lon), toNumber(lat));
-              }
-            } else if (source != null) {
-              point =
-                featureCenters.get(String(source)) ??
-                featureCenters.get(String(datum[labelKey] ?? datum.name ?? ""));
+  const pointMarkup = config.map?.pointKey
+    ? data
+        .map((datum, index) => {
+          const source = datum[config.map!.pointKey!];
+          let point: Point | undefined;
+          if (Array.isArray(source) && source.length >= 2) {
+            point = transform(toNumber(source[0]), toNumber(source[1]));
+          } else if (source && typeof source === "object") {
+            const candidate = source as Record<string, unknown>;
+            const lon = candidate.lon ?? candidate.lng ?? candidate.longitude;
+            const lat = candidate.lat ?? candidate.latitude;
+            if (lon != null && lat != null) {
+              point = transform(toNumber(lon), toNumber(lat));
             }
-            if (!point) return "";
-            const pointLabel = String(datum[labelKey] ?? datum.name ?? `Point ${index + 1}`);
-            ctx.interactivePoints.push({
-              x: point.x,
-              y: point.y,
-              key: `point:${pointLabel}`,
-              label: pointLabel,
-              value: formatSeriesValue(
-                datum[valueKey],
-                series,
-                config.axes?.y,
-                config,
-              ),
-              raw: datum,
-              series,
-              color: series.color,
-            });
-            return wrapAnimatedMarkup(
-              runtime,
-              `<circle cx="${point.x}" cy="${point.y}" r="${pointRadius}" fill="${series.color ?? "var(--primary)"}" stroke="${ctx.theme.background}" stroke-width="2" data-sx-chart-key="${escapeHtml(`point:${pointLabel}`)}" />`,
-              "scale",
+          } else if (source != null) {
+            point = getMapLookupEntry(
+              featureCenters,
+              source,
+              datum[labelKey],
+              datum.name,
             );
-          })
-          .join("")
-      : "";
+          }
+          if (!point) return "";
+          const pointLabel = String(
+            datum[labelKey] ?? datum.name ?? `Point ${index + 1}`,
+          );
+          ctx.interactivePoints.push({
+            x: point.x,
+            y: point.y,
+            key: `point:${pointLabel}`,
+            label: pointLabel,
+            value: formatSeriesValue(
+              datum[valueKey],
+              series,
+              config.axes?.y,
+              config,
+            ),
+            raw: datum,
+            series,
+            color: series.color,
+          });
+          return wrapAnimatedMarkup(
+            runtime,
+            `<circle cx="${point.x}" cy="${point.y}" r="${pointRadius}" fill="${series.color ?? "var(--primary)"}" stroke="${ctx.theme.background}" stroke-width="2" data-sx-chart-key="${escapeHtml(`point:${pointLabel}`)}" />`,
+            "scale",
+          );
+        })
+        .join("")
+    : "";
 
   return `${regionMarkup}${pointMarkup}`;
 }
@@ -2910,9 +3423,25 @@ function renderCartesianChart(
   const xAxis = config.axes?.x;
   const yAxis = config.axes?.y;
   const yAxis2 = config.axes?.y2;
-  const sampleX = data[0]?.[visibleSeries[0]?.xKey ?? "x"];
-  const xScaleType = resolveScaleType(xAxis, sampleX);
+  const xScaleType = resolveScaleType(xAxis, collectXValues(data, visibleSeries));
   const isHorizontalBarChart = type === "horizontal-bar";
+  const usesBucketedTimeBars =
+    xScaleType === "time" && (type === "bar" || type === "stacked-bar");
+  const temporalBarData = usesBucketedTimeBars
+    ? normalizeTemporalBarData(data, visibleSeries)
+    : undefined;
+  if (temporalBarData) {
+    data = temporalBarData.data;
+  }
+  const usesContinuousVerticalBars = chartUsesContinuousVerticalBars(
+    type,
+    visibleSeries,
+  );
+  const usesDiscreteCountAxis =
+    usesBucketedTimeBars &&
+    yAxis?.scaleType !== "percentage" &&
+    !yAxis?.tickValues?.length &&
+    !yAxis?.tickFormat;
   const edgeToEdgeCategoryPaths =
     type === "line" || type === "area" || type === "stacked-area";
 
@@ -2964,13 +3493,27 @@ function renderCartesianChart(
             yAxis.max != null
               ? toNumber(yAxis.max)
               : maxValue([...allY, stackedMax]) <= 1
-                ? 1
-                : 100,
+              ? 1
+              : 100,
         }
+      : usesDiscreteCountAxis
+        ? {
+            min: yAxis?.min != null ? toNumber(yAxis.min) : 0,
+            max:
+              yAxis?.max != null
+                ? toNumber(yAxis.max)
+                : Math.max(1, Math.ceil(maxValue([...allY, stackedMax]))),
+          }
       : autoDomainBounds([...allY, stackedMax], yAxis, true);
   const yMin = primaryBounds.min;
   const yMax = primaryBounds.max;
-  const yScale = createNumericAxisScale(yAxis, yMin, yMax, plotY + plotHeight, plotY);
+  const yScale = createNumericAxisScale(
+    yAxis,
+    yMin,
+    yMax,
+    plotY + plotHeight,
+    plotY,
+  );
   const numericYToCoord = (value: number) => yScale.scale(value);
   let yToCoord: (value: unknown) => number = (value) =>
     numericYToCoord(toNumber(value));
@@ -2984,7 +3527,13 @@ function renderCartesianChart(
       plotY + plotHeight,
       0.18,
     );
-    const valueScale = createNumericAxisScale(yAxis, yMin, yMax, plotX, plotX + plotWidth);
+    const valueScale = createNumericAxisScale(
+      yAxis,
+      yMin,
+      yMax,
+      plotX,
+      plotX + plotWidth,
+    );
     xToCoord = (value) => valueScale.scale(toNumber(value));
     coordToX = (coord) => valueScale.invert(coord);
     xTicks = resolveTickValues(
@@ -3032,12 +3581,58 @@ function renderCartesianChart(
       const left = categoryScale!.scale(String(key));
       return left == null ? undefined : left + categoryScale!.bandwidth() / 2;
     };
+  } else if (usesBucketedTimeBars && temporalBarData) {
+    const bucketDomain = temporalBarData.bucketDates.map((bucket) =>
+      new Date(bucket).toISOString(),
+    );
+    const bucketDates = temporalBarData.bucketDates.map((bucket) => new Date(bucket));
+    categoryScale = createBandScale(bucketDomain, plotX, plotX + plotWidth, 0.12);
+    xToCoord = (value) => {
+      const left = categoryScale!.scale(
+        bucketKeyForTemporalValue(value, temporalBarData.unit),
+      );
+      return (left ?? plotX) + categoryScale!.bandwidth() / 2;
+    };
+    xToStart = (value) =>
+      categoryScale!.scale(bucketKeyForTemporalValue(value, temporalBarData.unit)) ??
+      plotX;
+    coordToX = (coord) => coord - plotX;
+    xTicks = resolveTickValues(
+      xAxis,
+      bucketDates,
+      axisTickCount(xAxis, 6),
+    );
+    yTicks = usesDiscreteCountAxis
+      ? buildIntegerTicks(yMin, yMax, axisTickCount(yAxis, 5))
+      : resolveTickValues(
+          yAxis,
+          yScale.ticks(axisTickCount(yAxis, 5)),
+          axisTickCount(yAxis, 5),
+        );
+    keyToCoord = (key) => {
+      const left = categoryScale!.scale(
+        bucketKeyForTemporalValue(key, temporalBarData.unit),
+      );
+      return left == null ? undefined : left + categoryScale!.bandwidth() / 2;
+    };
+    zoomable = false;
   } else if (xScaleType === "time") {
     const values = data.map((datum) =>
       toDateMs(datum[visibleSeries[0]?.xKey ?? "x"]),
     );
-    let min = Number(xAxis?.min ? toDateMs(xAxis.min) : minValue(values));
-    let max = Number(xAxis?.max ? toDateMs(xAxis.max) : maxValue(values));
+    const explicitMin = xAxis?.min != null ? toDateMs(xAxis.min) : undefined;
+    const explicitMax = xAxis?.max != null ? toDateMs(xAxis.max) : undefined;
+    let min = Number(explicitMin ?? minValue(values));
+    let max = Number(explicitMax ?? maxValue(values));
+    if (
+      usesContinuousVerticalBars &&
+      !runtime.state.zoomX &&
+      (explicitMin == null || explicitMax == null)
+    ) {
+      const padding = continuousDomainPadding(values, xScaleType);
+      if (explicitMin == null) min -= padding.min;
+      if (explicitMax == null) max += padding.max;
+    }
     if (runtime.state.zoomX) [min, max] = runtime.state.zoomX;
     const scale = createNumericAxisScale(
       xAxis,
@@ -3055,7 +3650,9 @@ function renderCartesianChart(
     );
     yTicks = resolveTickValues(
       yAxis,
-      yScale.ticks(axisTickCount(yAxis, 5)),
+      usesDiscreteCountAxis
+        ? buildIntegerTicks(yMin, yMax, axisTickCount(yAxis, 5))
+        : yScale.ticks(axisTickCount(yAxis, 5)),
       axisTickCount(yAxis, 5),
     );
     keyToCoord = (key) => xToCoord(Number(key));
@@ -3090,7 +3687,9 @@ function renderCartesianChart(
     );
     yTicks = resolveTickValues(
       yAxis,
-      yScale.ticks(axisTickCount(yAxis, 5)),
+      usesDiscreteCountAxis
+        ? buildIntegerTicks(yMin, yMax, axisTickCount(yAxis, 5))
+        : yScale.ticks(axisTickCount(yAxis, 5)),
       axisTickCount(yAxis, 5),
     );
     keyToCoord = (key) => {
@@ -3107,8 +3706,19 @@ function renderCartesianChart(
     const values = data.map((datum) =>
       toNumber(datum[visibleSeries[0]?.xKey ?? "x"]),
     );
-    let min = Number(xAxis?.min ?? minValue(values));
-    let max = Number(xAxis?.max ?? maxValue(values));
+    const explicitMin = xAxis?.min != null ? toNumber(xAxis.min) : undefined;
+    const explicitMax = xAxis?.max != null ? toNumber(xAxis.max) : undefined;
+    let min = Number(explicitMin ?? minValue(values));
+    let max = Number(explicitMax ?? maxValue(values));
+    if (
+      usesContinuousVerticalBars &&
+      !runtime.state.zoomX &&
+      (explicitMin == null || explicitMax == null)
+    ) {
+      const padding = continuousDomainPadding(values, xScaleType);
+      if (explicitMin == null) min -= padding.min;
+      if (explicitMax == null) max += padding.max;
+    }
     if (runtime.state.zoomX) [min, max] = runtime.state.zoomX;
     const scale = createNumericAxisScale(
       xAxis,
@@ -3126,7 +3736,9 @@ function renderCartesianChart(
     );
     yTicks = resolveTickValues(
       yAxis,
-      yScale.ticks(axisTickCount(yAxis, 5)),
+      usesDiscreteCountAxis
+        ? buildIntegerTicks(yMin, yMax, axisTickCount(yAxis, 5))
+        : yScale.ticks(axisTickCount(yAxis, 5)),
       axisTickCount(yAxis, 5),
     );
     keyToCoord = (key) => xToCoord(Number(key));
@@ -3208,60 +3820,106 @@ function renderCartesianChart(
       (series, index) => series.yKey ?? series.valueKey ?? `series-${index}`,
     );
     const stacked = stackSeries(data, keys);
+    const stackedSlotLayout =
+      xScaleType === "category" || usesBucketedTimeBars
+        ? []
+        : createContinuousSlotLayout(
+            data.map((datum) => datum[visibleSeries[0].xKey ?? "x"]),
+            xScaleType,
+            xToCoord,
+            plotX,
+            plotWidth,
+          );
 
     if (type === "stacked-area") {
       stacked.forEach((layer, layerIndex) => {
         const series = visibleSeries[layerIndex];
+        const lineMode = series.lineMode ?? "smooth";
+        const keyForDatum = (datum: AnyDatum, pointIndex: number) =>
+          xScaleType === "time"
+            ? toDateMs(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"])
+            : String(
+                datum[series.xKey ?? visibleSeries[0].xKey ?? "x"] ??
+                  pointIndex,
+              );
         const top = layer.map(([_, end, datum]) => ({
           x: xToCoord(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"]),
           y: yToCoord(end),
         }));
-        const bottom = layer
-          .map(([start, _, datum]) => ({
-            x: xToCoord(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"]),
-            y: yToCoord(start),
-          }))
-          .reverse();
+        const bottom = layer.map(([start, _, datum]) => ({
+          x: xToCoord(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"]),
+          y: yToCoord(start),
+        }));
         layers.push(
           wrapAnimatedMarkup(
             runtime,
-            `<path d="${linePath(top)} ${bottom.map((point) => `L ${point.x} ${point.y}`).join(" ")} Z" fill="${series.color}" fill-opacity="${series.areaOpacity ?? 0.28}" stroke="${series.color}" stroke-width="2" />${series.labels ? layer
-              .map(([_, end, datum]) =>
-                renderDataLabel(
-                  xToCoord(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"]),
-                  yToCoord(end) - 10,
-                  formatValue(
-                    datum[series.yKey ?? series.valueKey ?? "value"],
-                    config.axes?.y,
-                    config.locale,
-                    config.timeZone,
-                  ),
-                  {
-                    fill: ctx.theme.foreground,
-                    stroke: ctx.theme.background,
-                  },
-                ),
-              )
-              .join("") : ""}`,
+            `<path d="${closedAreaPath(top, bottom, lineMode)}" fill="${series.color}" fill-opacity="${series.areaOpacity ?? 0.28}" />` +
+              `<path d="${linePath(top, lineMode)}" fill="none" stroke="${series.color}" stroke-width="${series.strokeWidth ?? 2.5}" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="${series.dashStyle ?? ""}" />${
+                series.labels
+                  ? layer
+                      .map(([_, end, datum]) =>
+                        renderDataLabel(
+                          xToCoord(
+                            datum[series.xKey ?? visibleSeries[0].xKey ?? "x"],
+                          ),
+                          yToCoord(end) - 10,
+                          formatValue(
+                            datum[series.yKey ?? series.valueKey ?? "value"],
+                            config.axes?.y,
+                            config.locale,
+                            config.timeZone,
+                          ),
+                          {
+                            fill: ctx.theme.foreground,
+                            stroke: ctx.theme.background,
+                          },
+                        ),
+                      )
+                      .join("")
+                  : ""
+              }`,
             "fade-up",
             "center bottom",
           ),
         );
+        layer.forEach(([start, end, datum], pointIndex) => {
+          const rawX = datum[series.xKey ?? visibleSeries[0].xKey ?? "x"];
+          ctx.interactivePoints.push({
+            x: xToCoord(rawX),
+            y: (yToCoord(start) + yToCoord(end)) / 2,
+            key: keyForDatum(datum, pointIndex),
+            label: `${series.name ?? "Series"} / ${formatValue(
+              rawX,
+              config.axes?.x,
+              config.locale,
+              config.timeZone,
+            )}`,
+            value: formatSeriesValue(
+              end - start,
+              series,
+              config.axes?.y,
+              config,
+            ),
+            raw: datum,
+            series,
+          });
+        });
       });
     } else {
-      const width = Math.max(
-        6,
-        Math.min(
-          categoryScale?.bandwidth() ?? 18,
-          visibleSeries[0]?.barWidth ?? (categoryScale?.bandwidth() ?? 18),
-        ),
-      );
       const stackDefs = data
         .map((datum, pointIndex) => {
+          const slot = stackedSlotLayout[pointIndex];
+          const availableWidth =
+            slot?.width ?? categoryScale?.bandwidth() ?? 18;
+          const width = resolveVerticalBarWidth(
+            availableWidth,
+            visibleSeries[0]?.barWidth,
+          );
           const x =
-            xToCoord(
-              datum[visibleSeries[0].xKey ?? "x"],
-            ) - width / 2;
+            (slot?.start ??
+              xToCoord(datum[visibleSeries[0].xKey ?? "x"]) -
+                availableWidth / 2) +
+            (availableWidth - width) / 2;
           const total = sumValues(
             visibleSeries.map((series) =>
               toNumber(datum[series.yKey ?? series.valueKey ?? "value"]),
@@ -3281,9 +3939,18 @@ function renderCartesianChart(
       stacked.forEach((layer, layerIndex) => {
         const series = visibleSeries[layerIndex];
         layer.forEach(([start, end, datum], pointIndex) => {
+          const slot = stackedSlotLayout[pointIndex];
+          const availableWidth =
+            slot?.width ?? categoryScale?.bandwidth() ?? 18;
+          const width = resolveVerticalBarWidth(
+            availableWidth,
+            series.barWidth,
+          );
           const x =
-            xToCoord(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"]) -
-            width / 2;
+            (slot?.start ??
+              xToCoord(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"]) -
+                availableWidth / 2) +
+            (availableWidth - width) / 2;
           const y = yToCoord(end);
           const height = yToCoord(start) - y;
           const clipId = `${runtime.clipPathId}-stack-${pointIndex}`;
@@ -3291,22 +3958,26 @@ function renderCartesianChart(
           layers.push(
             wrapAnimatedMarkup(
               runtime,
-              `<rect x="${x}" y="${y}" width="${width}" height="${Math.max(0, height)}" fill="${series.color}" clip-path="url(#${clipId})" data-sx-chart-key="${escapeHtml(String(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"] ?? pointIndex))}" />${series.labels ? renderDataLabel(
-                x + width / 2,
-                height >= 20 ? y + height / 2 : y - 8,
-                formatSeriesValue(
-                  end - start,
-                  series,
-                  config.axes?.y,
-                  config,
-                ),
-                height >= 20
-                  ? { fill: ctx.theme.background ?? "#ffffff" }
-                  : {
-                      fill: ctx.theme.foreground,
-                      stroke: ctx.theme.background,
-                    },
-              ) : ""}`,
+              `<rect x="${x}" y="${y}" width="${width}" height="${Math.max(0, height)}" fill="${series.color}" clip-path="url(#${clipId})" data-sx-chart-key="${escapeHtml(String(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"] ?? pointIndex))}" />${
+                series.labels
+                  ? renderDataLabel(
+                      x + width / 2,
+                      height >= 20 ? y + height / 2 : y - 8,
+                      formatSeriesValue(
+                        end - start,
+                        series,
+                        config.axes?.y,
+                        config,
+                      ),
+                      height >= 20
+                        ? { fill: ctx.theme.background ?? "#ffffff" }
+                        : {
+                            fill: ctx.theme.foreground,
+                            stroke: ctx.theme.background,
+                          },
+                    )
+                  : ""
+              }`,
               "grow-y",
               "center bottom",
             ),
@@ -3318,7 +3989,12 @@ function renderCartesianChart(
             key: String(
               datum[series.xKey ?? visibleSeries[0].xKey ?? "x"] ?? pointIndex,
             ),
-            label: `${series.name ?? "Series"} / ${String(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"] ?? pointIndex)}`,
+            label: `${series.name ?? "Series"} / ${formatValue(
+              datum[series.xKey ?? visibleSeries[0].xKey ?? "x"] ?? pointIndex,
+              config.axes?.x,
+              config.locale,
+              config.timeZone,
+            )}`,
             value: formatSeriesValue(
               end - start,
               series,
@@ -3351,17 +4027,26 @@ function renderCartesianChart(
       layers.push(
         wrapAnimatedMarkup(
           runtime,
-          `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="5" fill="${series.color}" data-sx-chart-key="${escapeHtml(`${bucket.x0}`)}" />${series.labels ? renderDataLabel(
-            x + width / 2,
-            height >= 20 ? y + height / 2 : y - 8,
-            formatSeriesValue(bucket.length, series, config.axes?.y, config),
-            height >= 20
-              ? { fill: ctx.theme.background ?? "#ffffff" }
-              : {
-                  fill: ctx.theme.foreground,
-                  stroke: ctx.theme.background,
-                },
-          ) : ""}`,
+          `<rect x="${x}" y="${y}" width="${width}" height="${height}" rx="5" fill="${series.color}" data-sx-chart-key="${escapeHtml(`${bucket.x0}`)}" />${
+            series.labels
+              ? renderDataLabel(
+                  x + width / 2,
+                  height >= 20 ? y + height / 2 : y - 8,
+                  formatSeriesValue(
+                    bucket.length,
+                    series,
+                    config.axes?.y,
+                    config,
+                  ),
+                  height >= 20
+                    ? { fill: ctx.theme.background ?? "#ffffff" }
+                    : {
+                        fill: ctx.theme.foreground,
+                        stroke: ctx.theme.background,
+                      },
+                )
+              : ""
+          }`,
           "grow-y",
           "center bottom",
         ),
@@ -3398,6 +4083,14 @@ function renderCartesianChart(
         effectiveType === "area" ||
         effectiveType === "multi-axis"
       ) {
+        const lineMode =
+          series.lineMode ??
+          (effectiveType === "line" || effectiveType === "area"
+            ? "smooth"
+            : "straight");
+        const markerSize =
+          series.markerSize ??
+          (effectiveType === "line" || effectiveType === "area" ? 0 : 3);
         const points = decimate(
           pointsForLine(data, series, xToCoord, targetY),
           1500,
@@ -3406,19 +4099,19 @@ function renderCartesianChart(
         const seriesLayers: string[] = [];
         if (effectiveType === "area") {
           seriesLayers.push(
-            `<path d="${areaPath(linePointsOnly, plotY + plotHeight)}" fill="${series.color}" fill-opacity="${series.areaOpacity ?? 0.22}" />`,
+            `<path d="${areaPath(linePointsOnly, plotY + plotHeight, lineMode)}" fill="${series.color}" fill-opacity="${series.areaOpacity ?? 0.22}" />`,
           );
         }
         seriesLayers.push(
-          `<path d="${linePath(linePointsOnly)}" fill="none" stroke="${series.color}" stroke-width="${series.strokeWidth ?? 2.5}" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="${series.dashStyle ?? ""}" />`,
+          `<path d="${linePath(linePointsOnly, lineMode)}" fill="none" stroke="${series.color}" stroke-width="${series.strokeWidth ?? 2.5}" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="${series.dashStyle ?? ""}" />`,
         );
         points.forEach((entry) => {
-          if ((series.markerSize ?? 3) > 0) {
+          if (markerSize > 0) {
             seriesLayers.push(
               `<g data-sx-chart-key="${escapeHtml(String(xScaleType === "time" ? toDateMs(entry.rawX) : entry.rawX))}">${renderMarker(
                 entry.point.x,
                 entry.point.y,
-                series.markerSize ?? 3,
+                markerSize,
                 series.color ?? "var(--primary)",
                 series.markerShape,
               )}</g>`,
@@ -3470,6 +4163,18 @@ function renderCartesianChart(
         effectiveType === "bar" ||
         effectiveType === "horizontal-bar"
       ) {
+        const slotLayout =
+          effectiveType === "horizontal-bar" ||
+          xScaleType === "category" ||
+          (usesBucketedTimeBars && effectiveType === "bar")
+            ? []
+            : createContinuousSlotLayout(
+                data.map((datum) => datum[series.xKey ?? "x"]),
+                xScaleType,
+                xToCoord,
+                plotX,
+                plotWidth,
+              );
         const groupedBarSeries = visibleSeries.filter((entry, index) => {
           const nextType =
             type === "combo"
@@ -3489,15 +4194,17 @@ function renderCartesianChart(
           categoryScale?.bandwidth() ??
           Math.max(8, plotWidth / Math.max(1, data.length * groupCount) - 6);
         data.forEach((datum, pointIndex) => {
+          const slot = slotLayout[pointIndex];
           const xValue = datum[series.xKey ?? "x"];
           const yValue = toNumber(datum[series.yKey ?? series.valueKey ?? "y"]);
-          const slotWidth = bandWidth / groupCount;
-          const segmentWidth = Math.max(
-            6,
-            Math.min(slotWidth, series.barWidth ?? slotWidth),
+          const availableWidth = slot?.width ?? bandWidth;
+          const slotWidth = availableWidth / groupCount;
+          const segmentWidth = resolveVerticalBarWidth(
+            slotWidth,
+            series.barWidth,
           );
           const xBase =
-            xToStart(xValue) +
+            (slot?.start ?? xToStart(xValue)) +
             Math.max(0, barIndex) * slotWidth +
             (slotWidth - segmentWidth) / 2;
           const y = targetY(yValue);
@@ -3519,23 +4226,27 @@ function renderCartesianChart(
             layers.push(
               wrapAnimatedMarkup(
                 runtime,
-                `<rect x="${barLeft}" y="${top}" width="${Math.max(0, barWidth)}" height="${segmentHeight}" rx="6" fill="${series.color}" data-sx-chart-key="${escapeHtml(String(xValue ?? pointIndex))}" />${series.labels ? renderDataLabel(
-                  barWidth >= 36 ? barLeft + barWidth / 2 : valueX + 6,
-                  top + segmentHeight / 2,
-                  formatSeriesValue(
-                    yValue,
-                    series,
-                    config.axes?.y,
-                    config,
-                  ),
-                  barWidth >= 36
-                    ? { fill: ctx.theme.background ?? "#ffffff" }
-                    : {
-                        anchor: "start",
-                        fill: ctx.theme.foreground,
-                        stroke: ctx.theme.background,
-                      },
-                ) : ""}`,
+                `<rect x="${barLeft}" y="${top}" width="${Math.max(0, barWidth)}" height="${segmentHeight}" rx="6" fill="${series.color}" data-sx-chart-key="${escapeHtml(String(xValue ?? pointIndex))}" />${
+                  series.labels
+                    ? renderDataLabel(
+                        barWidth >= 36 ? barLeft + barWidth / 2 : valueX + 6,
+                        top + segmentHeight / 2,
+                        formatSeriesValue(
+                          yValue,
+                          series,
+                          config.axes?.y,
+                          config,
+                        ),
+                        barWidth >= 36
+                          ? { fill: ctx.theme.background ?? "#ffffff" }
+                          : {
+                              anchor: "start",
+                              fill: ctx.theme.foreground,
+                              stroke: ctx.theme.background,
+                            },
+                      )
+                    : ""
+                }`,
                 "grow-x",
                 `${baselineX <= valueX ? "left" : "right"} center`,
               ),
@@ -3544,13 +4255,13 @@ function renderCartesianChart(
               x: valueX,
               y: top + segmentHeight / 2,
               key: String(xValue ?? pointIndex),
-              label: `${series.name ?? "Series"} / ${String(xValue ?? pointIndex)}`,
-              value: formatSeriesValue(
-                yValue,
-                series,
-                config.axes?.y,
-                config,
-              ),
+              label: `${series.name ?? "Series"} / ${formatValue(
+                xValue ?? pointIndex,
+                config.axes?.x,
+                config.locale,
+                config.timeZone,
+              )}`,
+              value: formatSeriesValue(yValue, series, config.axes?.y, config),
               raw: datum,
               series,
             });
@@ -3558,22 +4269,28 @@ function renderCartesianChart(
             layers.push(
               wrapAnimatedMarkup(
                 runtime,
-                `<rect x="${xBase}" y="${y}" width="${Math.max(6, segmentWidth)}" height="${Math.max(0, height)}" rx="6" fill="${series.color}" fill-opacity="${series.fillOpacity ?? 0.88}" data-sx-chart-key="${escapeHtml(String(xValue ?? pointIndex))}" />${series.labels ? renderDataLabel(
-                  xBase + segmentWidth / 2,
-                  height >= 20 ? y + height / 2 : y - 8,
-                  formatSeriesValue(
-                    yValue,
-                    series,
-                    series.axis === "y2" ? config.axes?.y2 : config.axes?.y,
-                    config,
-                  ),
-                  height >= 20
-                    ? { fill: ctx.theme.background ?? "#ffffff" }
-                    : {
-                        fill: ctx.theme.foreground,
-                        stroke: ctx.theme.background,
-                      },
-                ) : ""}`,
+                `<rect x="${xBase}" y="${y}" width="${Math.max(6, segmentWidth)}" height="${Math.max(0, height)}" rx="6" fill="${series.color}" fill-opacity="${series.fillOpacity ?? 0.88}" data-sx-chart-key="${escapeHtml(String(xValue ?? pointIndex))}" />${
+                  series.labels
+                    ? renderDataLabel(
+                        xBase + segmentWidth / 2,
+                        height >= 20 ? y + height / 2 : y - 8,
+                        formatSeriesValue(
+                          yValue,
+                          series,
+                          series.axis === "y2"
+                            ? config.axes?.y2
+                            : config.axes?.y,
+                          config,
+                        ),
+                        height >= 20
+                          ? { fill: ctx.theme.background ?? "#ffffff" }
+                          : {
+                              fill: ctx.theme.foreground,
+                              stroke: ctx.theme.background,
+                            },
+                      )
+                    : ""
+                }`,
                 "grow-y",
                 "center bottom",
               ),
@@ -3582,7 +4299,12 @@ function renderCartesianChart(
               x: xBase + segmentWidth / 2,
               y: y + height / 2,
               key: String(xValue ?? pointIndex),
-              label: `${series.name ?? "Series"} / ${String(xValue ?? pointIndex)}`,
+              label: `${series.name ?? "Series"} / ${formatValue(
+                xValue ?? pointIndex,
+                config.axes?.x,
+                config.locale,
+                config.timeZone,
+              )}`,
               value: formatSeriesValue(
                 yValue,
                 series,
@@ -3620,7 +4342,12 @@ function renderCartesianChart(
             x,
             y,
             key: String(xValue ?? pointIndex),
-            label: `${series.name ?? "Series"} / ${String(xValue ?? pointIndex)}`,
+            label: `${series.name ?? "Series"} / ${formatValue(
+              xValue ?? pointIndex,
+              config.axes?.x,
+              config.locale,
+              config.timeZone,
+            )}`,
             value: formatValue(
               yValue,
               config.axes?.y,
@@ -3632,11 +4359,28 @@ function renderCartesianChart(
           });
         });
       } else if (effectiveType === "candlestick" || effectiveType === "ohlc") {
-        const width =
-          categoryScale?.bandwidth() ??
-          Math.max(6, plotWidth / Math.max(1, data.length * 1.8));
+        const slotLayout =
+          xScaleType === "category"
+            ? []
+            : createContinuousSlotLayout(
+                data.map((datum) => datum[series.xKey ?? "x"]),
+                xScaleType,
+                xToCoord,
+                plotX,
+                plotWidth,
+                0.28,
+              );
         data.forEach((datum, pointIndex) => {
-          const x = xToCoord(datum[series.xKey ?? "x"]);
+          const slot = slotLayout[pointIndex];
+          const availableWidth =
+            slot?.width ??
+            categoryScale?.bandwidth() ??
+            Math.max(6, plotWidth / Math.max(1, data.length * 1.8));
+          const width = Math.max(
+            6,
+            Math.min(availableWidth, series.barWidth ?? availableWidth),
+          );
+          const x = slot?.center ?? xToCoord(datum[series.xKey ?? "x"]);
           const open = toNumber(datum[series.openKey ?? "open"]);
           const high = toNumber(datum[series.highKey ?? "high"]);
           const low = toNumber(datum[series.lowKey ?? "low"]);
@@ -3674,7 +4418,12 @@ function renderCartesianChart(
             x,
             y: yHigh,
             key: String(datum[series.xKey ?? "x"] ?? pointIndex),
-            label: `${series.name ?? effectiveType} / ${String(datum[series.xKey ?? "x"] ?? pointIndex)}`,
+            label: `${series.name ?? effectiveType} / ${formatValue(
+              datum[series.xKey ?? "x"] ?? pointIndex,
+              config.axes?.x,
+              config.locale,
+              config.timeZone,
+            )}`,
             value: `O ${open} H ${high} L ${low} C ${close}`,
             raw: datum,
             series,
@@ -3686,23 +4435,43 @@ function renderCartesianChart(
 
   if (config.volumeOverlay?.enabled && config.volumeOverlay.data?.length) {
     const overlay = config.volumeOverlay.data;
+    const overlaySlotLayout =
+      xScaleType === "category"
+        ? []
+        : createContinuousSlotLayout(
+            overlay.map(
+              (datum) =>
+                datum[
+                  config.volumeOverlay?.xKey ?? visibleSeries[0]?.xKey ?? "x"
+                ],
+            ),
+            xScaleType,
+            xToCoord,
+            plotX,
+            plotWidth,
+            0.4,
+          );
     const max =
       maxValue(
         overlay.map((datum) =>
           toNumber(datum[config.volumeOverlay?.yKey ?? "volume"]),
         ),
       ) || 1;
-    overlay.forEach((datum) => {
-      const x = xToCoord(
-        datum[config.volumeOverlay?.xKey ?? visibleSeries[0]?.xKey ?? "x"],
-      );
+    overlay.forEach((datum, index) => {
+      const slot = overlaySlotLayout[index];
+      const x =
+        slot?.center ??
+        xToCoord(
+          datum[config.volumeOverlay?.xKey ?? visibleSeries[0]?.xKey ?? "x"],
+        );
+      const width = Math.max(4, Math.min(slot?.width ?? 8, 12));
       const volumeHeight =
         (toNumber(datum[config.volumeOverlay?.yKey ?? "volume"]) / max) *
         (plotHeight * 0.2);
       layers.push(
         wrapAnimatedMarkup(
           runtime,
-          `<rect x="${x - 4}" y="${plotY + plotHeight - volumeHeight}" width="8" height="${volumeHeight}" fill="${ctx.theme.muted}" fill-opacity="0.35" />`,
+          `<rect x="${x - width / 2}" y="${plotY + plotHeight - volumeHeight}" width="${width}" height="${volumeHeight}" fill="${ctx.theme.muted}" fill-opacity="0.35" />`,
           "grow-y",
           "center bottom",
         ),
@@ -3727,12 +4496,21 @@ function renderCartesianChart(
   if (trendlineMarkup) overlays.push(trendlineMarkup);
 
   if (isHoverEnabled(config) && runtime.state.hoveredKey != null) {
-    const coord = keyToCoord(runtime.state.hoveredKey);
+    const crosshairAxis = ctx.cartesian?.crosshairAxis;
+    const coord =
+      crosshairAxis === "y"
+        ? (runtime.state.hoveredY ?? keyToCoord(runtime.state.hoveredKey))
+        : (runtime.state.hoveredX ?? keyToCoord(runtime.state.hoveredKey));
     if (coord != null) {
-      ctx.crosshairMarkup =
-        ctx.cartesian?.crosshairAxis === "y"
-          ? `<line x1="${plotX}" y1="${coord}" x2="${plotX + plotWidth}" y2="${coord}" stroke="${ctx.theme.muted}" stroke-dasharray="4 4" />`
-          : `<line x1="${coord}" y1="${plotY}" x2="${coord}" y2="${plotY + plotHeight}" stroke="${ctx.theme.muted}" stroke-dasharray="4 4" />`;
+      if (crosshairAxis === "y" && runtime.state.hoveredX != null) {
+        const baselineX = clamp(xToCoord(0), plotX, plotX + plotWidth);
+        ctx.crosshairMarkup = `<line x1="${Math.min(baselineX, runtime.state.hoveredX)}" y1="${coord}" x2="${Math.max(baselineX, runtime.state.hoveredX)}" y2="${coord}" stroke="${ctx.theme.muted}" stroke-dasharray="4 4" />`;
+      } else {
+        ctx.crosshairMarkup =
+          crosshairAxis === "y"
+            ? `<line x1="${plotX}" y1="${coord}" x2="${plotX + plotWidth}" y2="${coord}" stroke="${ctx.theme.muted}" stroke-dasharray="4 4" />`
+            : `<line x1="${coord}" y1="${plotY}" x2="${coord}" y2="${plotY + plotHeight}" stroke="${ctx.theme.muted}" stroke-dasharray="4 4" />`;
+      }
     }
   }
 
@@ -3770,8 +4548,7 @@ function estimateCartesianSideReserves(
   const yAxisEnabled = isAxisEnabled(yAxis);
   const y2AxisEnabled = isAxisEnabled(yAxis2);
   const isHorizontalBarChart = type === "horizontal-bar";
-  const sampleX = data[0]?.[visibleSeries[0]?.xKey ?? "x"];
-  const xScaleType = resolveScaleType(xAxis, sampleX);
+  const xScaleType = resolveScaleType(xAxis, collectXValues(data, visibleSeries));
   let stackedMax = 0;
 
   if (type === "stacked-bar" || type === "stacked-area") {
@@ -3832,7 +4609,9 @@ function estimateCartesianSideReserves(
 
   const categoryLabels = resolveTickValues(
     xAxis,
-    unique(data.map((datum) => String(datum[visibleSeries[0]?.xKey ?? "x"] ?? ""))),
+    unique(
+      data.map((datum) => String(datum[visibleSeries[0]?.xKey ?? "x"] ?? "")),
+    ),
     axisTickCount(xAxis, 6),
   ).map((tick) => formatValue(tick, xAxis, config.locale, config.timeZone));
 
@@ -3914,8 +4693,16 @@ function renderChart(runtime: ChartRuntime) {
   const titleHeight = titleBlockHeight(config);
   const legendPosition = resolveLegendPosition(config);
   const legendAvailableWidth = width - padding.left - padding.right;
-  const legendHeight = legendBlockHeight(config, legendEntries, legendAvailableWidth);
-  const legendWidth = legendBlockWidth(config, legendEntries, legendAvailableWidth);
+  const legendHeight = legendBlockHeight(
+    config,
+    legendEntries,
+    legendAvailableWidth,
+  );
+  const legendWidth = legendBlockWidth(
+    config,
+    legendEntries,
+    legendAvailableWidth,
+  );
   const axisSideReserves = renderableCartesianTypes.has(type)
     ? estimateCartesianSideReserves(type, data, config, visibleSeries, padding)
     : { left: padding.left, right: padding.right };
@@ -3926,8 +4713,10 @@ function renderChart(runtime: ChartRuntime) {
   const plotLeft =
     axisSideReserves.left + (legendPosition === "left" ? legendWidth + 16 : 0);
   const plotRight =
-    axisSideReserves.right + (legendPosition === "right" ? legendWidth + 16 : 0);
-  const plotBottom = padding.bottom + (legendPosition === "bottom" ? legendHeight : 0);
+    axisSideReserves.right +
+    (legendPosition === "right" ? legendWidth + 16 : 0);
+  const plotBottom =
+    padding.bottom + (legendPosition === "bottom" ? legendHeight : 0);
   const plotWidth = Math.max(120, width - plotLeft - plotRight);
   const plotHeight = Math.max(120, height - plotTop - plotBottom);
 
@@ -4107,7 +4896,9 @@ function nearestPoint(context: RenderContext, x: number, y: number) {
         bestDistance = nextDistance;
       }
     }
-    return bestAxisDistance <= context.cartesian.hoverThreshold ? best : undefined;
+    return bestAxisDistance <= context.cartesian.hoverThreshold
+      ? best
+      : undefined;
   }
 
   let best: InteractivePoint | undefined;
@@ -4122,16 +4913,30 @@ function nearestPoint(context: RenderContext, x: number, y: number) {
   return distance < 110 ? best : undefined;
 }
 
+function isWithinCartesianPlot(context: RenderContext, x: number, y: number) {
+  if (!context.cartesian) return true;
+  const { plotX, plotY, plotWidth, plotHeight } = context.cartesian;
+  const epsilon = 0.5;
+  return (
+    x >= plotX - epsilon &&
+    x <= plotX + plotWidth + epsilon &&
+    y >= plotY - epsilon &&
+    y <= plotY + plotHeight + epsilon
+  );
+}
+
 function registerSync(runtime: ChartRuntime) {
-  if (!runtime.config.syncGroup) return;
+  runtime.syncCleanup?.();
+  const groupName = runtime.config.syncGroup;
+  if (!groupName) return;
   const group =
-    syncGroups.get(runtime.config.syncGroup) ?? new Set<ChartRuntime>();
+    syncGroups.get(groupName) ?? new Set<ChartRuntime>();
   group.add(runtime);
-  syncGroups.set(runtime.config.syncGroup, group);
-  runtime.teardownFns.push(() => {
+  syncGroups.set(groupName, group);
+  runtime.syncCleanup = () => {
     group.delete(runtime);
-    if (!group.size) syncGroups.delete(runtime.config.syncGroup!);
-  });
+    if (!group.size) syncGroups.delete(groupName);
+  };
 }
 
 function broadcastHover(
@@ -4145,6 +4950,8 @@ function broadcastHover(
     if (chart === runtime) return;
     if (!isHoverEnabled(chart.config)) return;
     chart.state.hoveredKey = key;
+    chart.state.hoveredX = undefined;
+    chart.state.hoveredY = undefined;
     renderChart(chart);
   });
 }
@@ -4160,10 +4967,40 @@ function tooltipPointsForKey(context: RenderContext, key: string | number) {
   });
 }
 
+function resolveInteractivePoint(
+  runtime: ChartRuntime,
+  target: EventTarget | null,
+  x: number,
+  y: number,
+) {
+  if (!runtime.context) return undefined;
+  const hoverKey = (target as HTMLElement | null)
+    ?.closest<SVGElement>("[data-sx-chart-key]")
+    ?.getAttribute("data-sx-chart-key");
+  if (resolveChartType(runtime.config) === "map") {
+    return hoverKey
+      ? tooltipPointsForKey(runtime.context, hoverKey)[0]
+      : undefined;
+  }
+  return (
+    nearestPoint(runtime.context, x, y) ??
+    (hoverKey ? tooltipPointsForKey(runtime.context, hoverKey)[0] : undefined)
+  );
+}
+
+function notifyConfigChange(runtime: ChartRuntime) {
+  runtime.container.dispatchEvent(new CustomEvent("sx-chart:configchange", {
+    bubbles: true,
+    detail: { config: configurationOf(runtime.config) },
+  }));
+}
+
 function attachInteractions(runtime: ChartRuntime) {
   const onClick = (event: Event) => {
     const target = event.target as HTMLElement;
-    const legendPageControl = target.closest<SVGGElement>("[data-sx-legend-page]");
+    const legendPageControl = target.closest<SVGGElement>(
+      "[data-sx-legend-page]",
+    );
     if (legendPageControl) {
       const direction = legendPageControl.getAttribute("data-sx-legend-page");
       runtime.legendPage += direction === "prev" ? -1 : 1;
@@ -4178,8 +5015,10 @@ function attachInteractions(runtime: ChartRuntime) {
       if (runtime.state.hiddenSeries.has(id))
         runtime.state.hiddenSeries.delete(id);
       else runtime.state.hiddenSeries.add(id);
+      runtime.config.hiddenSeries = [...runtime.state.hiddenSeries];
       runtime.animateOnNextRender = runtime.config.animate !== false;
       renderChart(runtime);
+      notifyConfigChange(runtime);
       return;
     }
 
@@ -4195,12 +5034,7 @@ function attachInteractions(runtime: ChartRuntime) {
       (((pointerEvent.clientY ?? 0) - svgBounds.top) /
         Math.max(1, svgBounds.height)) *
       runtime.context.height;
-    const hoverKey = (target as HTMLElement | null)
-      ?.closest<SVGElement>("[data-sx-chart-key]")
-      ?.getAttribute("data-sx-chart-key");
-    const point = hoverKey
-      ? tooltipPointsForKey(runtime.context, hoverKey)[0]
-      : nearestPoint(runtime.context, x, y);
+    const point = resolveInteractivePoint(runtime, target, x, y);
     if (point) {
       runtime.config.interactions.drilldown(point.raw);
     }
@@ -4242,35 +5076,51 @@ function attachInteractions(runtime: ChartRuntime) {
     }
     if (!isHoverEnabled(runtime.config)) {
       hideTooltip(runtime);
-      if (runtime.state.hoveredKey != null) {
+      if (
+        runtime.state.hoveredKey != null ||
+        runtime.state.hoveredX != null ||
+        runtime.state.hoveredY != null
+      ) {
         runtime.state.hoveredKey = undefined;
+        runtime.state.hoveredX = undefined;
+        runtime.state.hoveredY = undefined;
         broadcastHover(runtime, undefined);
         renderChart(runtime);
       }
       return;
     }
-    const isMapChart = resolveChartType(runtime.config) === "map";
-    const hoverKey = (event.target as HTMLElement | null)
-      ?.closest<SVGElement>("[data-sx-chart-key]")
-      ?.getAttribute("data-sx-chart-key");
-    const point = hoverKey
-      ? tooltipPointsForKey(runtime.context, hoverKey)[0]
-      : isMapChart
-        ? undefined
-        : nearestPoint(runtime.context, x, y);
+    if (!isWithinCartesianPlot(runtime.context, x, y)) {
+      hideTooltip(runtime);
+      runtime.state.hoveredKey = undefined;
+      runtime.state.hoveredX = undefined;
+      runtime.state.hoveredY = undefined;
+      broadcastHover(runtime, undefined);
+      renderChart(runtime);
+      return;
+    }
+    const point = resolveInteractivePoint(runtime, event.target, x, y);
     if (!point || runtime.config.tooltip?.conditional?.(point.raw) === false) {
       hideTooltip(runtime);
       runtime.state.hoveredKey = undefined;
+      runtime.state.hoveredX = undefined;
+      runtime.state.hoveredY = undefined;
       broadcastHover(runtime, undefined);
       renderChart(runtime);
       return;
     }
     const previousKey = runtime.state.hoveredKey;
+    const previousX = runtime.state.hoveredX;
+    const previousY = runtime.state.hoveredY;
     runtime.state.hoveredKey = point.key;
+    runtime.state.hoveredX = point.x;
+    runtime.state.hoveredY = point.y;
+    const hoverPositionChanged = previousX !== point.x || previousY !== point.y;
     if (!isTooltipEnabled(runtime.config)) {
       hideTooltip(runtime);
-      if (previousKey !== point.key) {
+      if (previousKey !== point.key || hoverPositionChanged) {
         renderChart(runtime);
+      }
+      if (previousKey !== point.key) {
         broadcastHover(runtime, point.key);
       }
       return;
@@ -4303,8 +5153,10 @@ function attachInteractions(runtime: ChartRuntime) {
     runtime.liveRegion.textContent = tooltipPoints
       .map((entry) => `${entry.series.name ?? "Series"} ${entry.value}`)
       .join(", ");
-    if (previousKey !== point.key) {
+    if (previousKey !== point.key || hoverPositionChanged) {
       renderChart(runtime);
+    }
+    if (previousKey !== point.key) {
       broadcastHover(runtime, point.key);
     }
   };
@@ -4312,6 +5164,8 @@ function attachInteractions(runtime: ChartRuntime) {
   const onPointerLeave = () => {
     hideTooltip(runtime);
     runtime.state.hoveredKey = undefined;
+    runtime.state.hoveredX = undefined;
+    runtime.state.hoveredY = undefined;
     renderChart(runtime);
     broadcastHover(runtime, undefined);
   };
@@ -4522,8 +5376,8 @@ export function createChart(
     svg,
     tooltip,
     liveRegion,
-    config: initialConfig,
-    state: { hiddenSeries: new Set<string>() },
+    config: { ...configurationOf(initialConfig), data: initialConfig.data },
+    state: { hiddenSeries: new Set(initialConfig.hiddenSeries ?? []) },
     context: null,
     destroyed: false,
     teardownFns: [],
@@ -4538,22 +5392,58 @@ export function createChart(
   renderChart(runtime);
   runtimeMap.set(container, runtime);
 
-  const onWindowResize = () => {
+  const rerenderIfResponsive = () => {
     if (runtime.config.responsive !== false) {
       runtime.animateOnNextRender = false;
       renderChart(runtime);
     }
   };
+  const onWindowResize = () => {
+    rerenderIfResponsive();
+  };
   window.addEventListener("resize", onWindowResize);
   runtime.teardownFns.push(() =>
     window.removeEventListener("resize", onWindowResize),
   );
+  if (typeof ResizeObserver !== "undefined") {
+    const resizeObserver = new ResizeObserver(() => {
+      const nextSize = getSize(runtime.container, runtime.config);
+      if (
+        runtime.context &&
+        runtime.context.width === nextSize.width &&
+        runtime.context.height === nextSize.height
+      ) {
+        return;
+      }
+      rerenderIfResponsive();
+    });
+    resizeObserver.observe(container);
+    if (container.parentElement) {
+      resizeObserver.observe(container.parentElement);
+    }
+    runtime.teardownFns.push(() => resizeObserver.disconnect());
+  }
+
+  function applyConfig(nextConfig: ChartOptions) {
+    if (runtime.destroyed) return;
+    const previous = configurationOf(runtime.config);
+    runtime.config = { ...configurationOf(nextConfig), data: nextConfig.data };
+    if (previous.syncGroup !== runtime.config.syncGroup) registerSync(runtime);
+    runtime.state.hiddenSeries = new Set(runtime.config.hiddenSeries ?? []);
+    runtime.animateOnNextRender = runtime.config.animate !== false;
+    renderChart(runtime);
+    if (!sameConfig(previous, configurationOf(runtime.config))) notifyConfigChange(runtime);
+  }
 
   const instance: ChartInstance = {
+    getConfig() {
+      return configurationOf(runtime.config);
+    },
+    setConfig(config) {
+      applyConfig({ ...config, data: runtime.config.data });
+    },
     update(nextConfig) {
-      runtime.config = { ...runtime.config, ...nextConfig };
-      runtime.animateOnNextRender = runtime.config.animate !== false;
-      renderChart(runtime);
+      applyConfig({ ...runtime.config, ...nextConfig });
     },
     setData(nextData) {
       runtime.config = { ...runtime.config, data: nextData };
@@ -4572,6 +5462,7 @@ export function createChart(
     destroy() {
       if (runtime.destroyed) return;
       runtime.destroyed = true;
+      runtime.syncCleanup?.();
       runtime.teardownFns.forEach((fn) => fn());
       runtimeMap.delete(container);
       instanceMap.delete(container);

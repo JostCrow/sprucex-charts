@@ -12,9 +12,12 @@ const isExamplesPage = examplePages.some((page) => page.slug === currentSlug);
 ---
 
 <aside
-  class="sticky top-0 hidden h-screen w-60 overflow-y-auto border-r border-sidebar-border bg-sidebar md:block [&_ul]:m-0 [&_ul]:list-none [&_ul]:p-0 [&_a]:mx-2 [&_a]:my-0.5 [&_a]:flex [&_a]:items-center [&_a]:gap-3 [&_a]:rounded-md [&_a]:px-4 [&_a]:py-2.5 [&_a]:text-sm [&_a]:text-sidebar-foreground [&_a]:no-underline [&_a]:transition-colors [&_a:hover]:bg-sidebar-accent [&_a[aria-current=page]]:bg-sidebar-primary [&_a[aria-current=page]]:text-sidebar-primary-foreground [&_summary]:mx-2 [&_summary]:my-0.5 [&_summary]:flex [&_summary]:cursor-pointer [&_summary]:list-none [&_summary]:items-center [&_summary]:gap-3 [&_summary]:rounded-md [&_summary]:px-4 [&_summary]:py-2.5 [&_summary]:text-sm [&_summary]:transition-colors [&_summary:hover]:bg-sidebar-accent [&_summary::-webkit-details-marker]:hidden [&_details[open]>summary]:bg-sidebar-accent [&_ul_ul]:pl-4"
+  id="docs-sidebar"
+  class="sidebar [&_ul]:m-0 [&_ul]:list-none [&_ul]:p-0 [&_a]:mx-2 [&_a]:my-0.5 [&_a]:flex [&_a]:items-center [&_a]:gap-3 [&_a]:rounded-md [&_a]:px-4 [&_a]:py-2.5 [&_a]:text-sm [&_a]:text-sidebar-foreground [&_a]:no-underline [&_a]:transition-colors [&_a:hover]:bg-sidebar-accent [&_a[aria-current=page]]:bg-sidebar-primary [&_a[aria-current=page]]:text-sidebar-primary-foreground [&_summary]:mx-2 [&_summary]:my-0.5 [&_summary]:flex [&_summary]:cursor-pointer [&_summary]:list-none [&_summary]:items-center [&_summary]:gap-3 [&_summary]:rounded-md [&_summary]:px-4 [&_summary]:py-2.5 [&_summary]:text-sm [&_summary]:transition-colors [&_summary:hover]:bg-sidebar-accent [&_summary::-webkit-details-marker]:hidden [&_details[open]>summary]:bg-sidebar-accent [&_ul_ul]:pl-4"
   data-side="left"
-  aria-hidden="false"
+  data-breakpoint="768"
+  data-initial-open="true"
+  data-initial-mobile-open="false"
 >
   <nav aria-label="Sidebar navigation">
     <section class="scrollbar">
@@ -23,15 +26,61 @@ const isExamplesPage = examplePages.some((page) => page.slug === currentSlug);
           <img src="/icon.svg" alt="SpruceX Charts Logo" class="size-12" />
           <h1 class="text-xl">SpruceX Charts</h1>
         </div>
-        <button
-          type="button"
-          aria-label="Toggle dark mode"
-          data-tooltip="Toggle dark mode"
-          data-side="bottom"
-          onclick="document.dispatchEvent(new CustomEvent('basecoat:theme'))"
-          class="btn-icon-outline size-8"
-        >
-          <span class="hidden dark:block">
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="Toggle dark mode"
+            data-tooltip="Toggle dark mode"
+            data-side="bottom"
+            data-keep-mobile-sidebar-open
+            onclick="document.dispatchEvent(new CustomEvent('basecoat:theme'))"
+            class="btn-icon-outline size-8"
+          >
+            <span class="hidden dark:block">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2"></path>
+                <path d="M12 20v2"></path>
+                <path d="m4.93 4.93 1.41 1.41"></path>
+                <path d="m17.66 17.66 1.41 1.41"></path>
+                <path d="M2 12h2"></path>
+                <path d="M20 12h2"></path>
+                <path d="m6.34 17.66-1.41 1.41"></path>
+                <path d="m19.07 4.93-1.41 1.41"></path>
+              </svg>
+            </span>
+            <span class="block dark:hidden">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+              </svg>
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-label="Close navigation"
+            class="btn-icon-outline size-8 md:hidden"
+            onclick="document.dispatchEvent(new CustomEvent('basecoat:sidebar', { detail: { id: 'docs-sidebar', action: 'close' } }))"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -43,33 +92,11 @@ const isExamplesPage = examplePages.some((page) => page.slug === currentSlug);
               stroke-linecap="round"
               stroke-linejoin="round"
             >
-              <circle cx="12" cy="12" r="4"></circle>
-              <path d="M12 2v2"></path>
-              <path d="M12 20v2"></path>
-              <path d="m4.93 4.93 1.41 1.41"></path>
-              <path d="m17.66 17.66 1.41 1.41"></path>
-              <path d="M2 12h2"></path>
-              <path d="M20 12h2"></path>
-              <path d="m6.34 17.66-1.41 1.41"></path>
-              <path d="m19.07 4.93-1.41 1.41"></path>
+              <path d="M18 6 6 18"></path>
+              <path d="m6 6 12 12"></path>
             </svg>
-          </span>
-          <span class="block dark:hidden">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
-            </svg>
-          </span>
-        </button>
+          </button>
+        </div>
       </div>
 
       <ul>

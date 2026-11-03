@@ -26,6 +26,7 @@ export type ChartType =
 export type ScaleType = "linear" | "log" | "time" | "category" | "percentage";
 export type LegendPosition = "top" | "right" | "bottom" | "left" | "inside";
 export type LegendLayout = "horizontal" | "vertical" | "wrapped";
+export type LineMode = "straight" | "stepped" | "smooth";
 
 export interface Padding {
   top: number;
@@ -34,7 +35,16 @@ export interface Padding {
   left: number;
 }
 
+/** JSON-friendly display rules, independent of the axis scale. */
+export type ValueFormat =
+  | { type: "text" }
+  | { type: "number"; options?: Intl.NumberFormatOptions }
+  | { type: "percent"; options?: Intl.NumberFormatOptions }
+  | { type: "currency"; currency: string; options?: Intl.NumberFormatOptions }
+  | { type: "date"; options?: Intl.DateTimeFormatOptions };
+
 export interface AxisConfig {
+  format?: ValueFormat;
   enabled?: boolean;
   scaleType?: ScaleType;
   min?: number | Date | string;
@@ -147,12 +157,13 @@ export interface BaseSeriesConfig {
   markerShape?: "circle" | "square" | "diamond";
   markerSize?: number;
   barWidth?: number;
+  lineMode?: LineMode;
   dashStyle?: string;
   visible?: boolean;
   labels?: boolean;
   order?: number;
   axis?: "y" | "y2";
-  format?: (value: unknown) => string;
+  format?: ValueFormat | ((value: unknown) => string);
 }
 
 export interface SankeySeriesConfig extends BaseSeriesConfig {
@@ -173,6 +184,7 @@ export interface MapConfig {
 export type SeriesConfig = BaseSeriesConfig | SankeySeriesConfig;
 
 export interface ChartOptions {
+  hiddenSeries?: string[];
   type?: ChartType;
   data?: Record<string, unknown>[] | Record<string, unknown>;
   series?: SeriesConfig[];
@@ -208,6 +220,13 @@ export interface ChartOptions {
   };
 }
 
+/** Save this separately from the chart's data source. Use declarative formats for JSON storage. */
+export type ChartConfiguration = Omit<ChartOptions, "data">;
+
+export interface ChartConfigChangeEvent {
+  config: ChartConfiguration;
+}
+
 export type SpruceXChartOptions = Omit<ChartOptions, "data" | "type">;
 
 export interface ChartState {
@@ -226,6 +245,10 @@ export interface ExportResult {
 }
 
 export interface ChartInstance {
+  /** Detached configuration snapshot, excluding the main data source. */
+  getConfig(): ChartConfiguration;
+  /** Replace configuration, retaining the current data source. */
+  setConfig(config: ChartConfiguration): void;
   update(nextConfig: ChartOptions): void;
   setData(nextData: Record<string, unknown>[] | Record<string, unknown>): void;
   resize(): void;

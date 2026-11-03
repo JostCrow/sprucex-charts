@@ -72,7 +72,8 @@ export const docPages: readonly DocPage[] = [
   },
   {
     browserTitle: "SpruceX Charts | Line",
-    description: "Single-series line rendering over shared category steps.",
+    description:
+      "Time-series line rendering with target lines and event overlays.",
     heading: "Line",
     href: "/examples/line",
     navLabel: "Line",
@@ -102,7 +103,7 @@ export const docPages: readonly DocPage[] = [
   },
   {
     browserTitle: "SpruceX Charts | Bar",
-    description: "Single-series vertical bars over a categorical axis.",
+    description: "Single-series vertical bars across categorical or bucketed time slots.",
     heading: "Bar",
     href: "/examples/bar",
     navLabel: "Bar",
@@ -300,7 +301,7 @@ export const docPages: readonly DocPage[] = [
   {
     browserTitle: "SpruceX Charts | Map",
     description:
-      "Render real GeoJSON or TopoJSON maps, including built-in world and US shapes plus custom files you import yourself.",
+      "Render real GeoJSON or TopoJSON maps, including built-in world shapes plus custom files you import yourself.",
     heading: "Map",
     href: "/examples/map",
     navLabel: "Map",

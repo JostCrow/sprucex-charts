@@ -3,75 +3,167 @@ import StaticChartExample from "../StaticChartExample.astro";
 
 const data = [
   {
-    month: "Jan",
+    date: "2026-01-01",
     revenue: 34,
-    pipeline: 25,
-    margin: 15,
   },
   {
-    month: "Feb",
-    revenue: 49,
-    pipeline: 36,
-    margin: 19,
+    date: "2026-01-02",
+    revenue: 42,
   },
   {
-    month: "Mar",
-    revenue: 63,
-    pipeline: 34,
-    margin: 23,
+    date: "2026-01-03",
+    revenue: 47,
   },
   {
-    month: "Apr",
-    revenue: 53,
-    pipeline: 45,
-    margin: 27,
+    date: "2026-01-04",
+    revenue: 54,
   },
   {
-    month: "May",
-    revenue: 68,
-    pipeline: 43,
-    margin: 24,
+    date: "2026-01-05",
+    revenue: 58,
   },
   {
-    month: "Jun",
-    revenue: 82,
-    pipeline: 54,
-    margin: 28,
+    date: "2026-01-06",
+    revenue: 64,
   },
   {
-    month: "Jul",
-    revenue: 72,
-    pipeline: 52,
-    margin: 32,
+    date: "2026-01-07",
+    revenue: 61,
   },
   {
-    month: "Aug",
-    revenue: 86,
-    pipeline: 63,
-    margin: 36,
+    date: "2026-01-08",
+    revenue: 69,
   },
 ];
 
 const options = {
-  title: "Line Trend",
-  subtitle: "Single-series line chart over shared category steps.",
+  title: "Revenue vs. Goals",
+  subtitle: "Target lines and event overlays on a time-series line chart.",
   series: [
     {
       id: "revenue",
       name: "Revenue",
-      xKey: "month",
+      xKey: "date",
       yKey: "revenue",
     },
   ],
   axes: {
     x: {
-      scaleType: "category",
+      scaleType: "time",
     },
     y: {
+      min: 0,
+      max: 80,
       grid: true,
     },
   },
+  trendlines: [
+    {
+      id: "target",
+      type: "target",
+      value: 55,
+      label: "Target",
+    },
+    {
+      id: "goal",
+      type: "target",
+      value: 65,
+      label: "Goal",
+      dashStyle: "3 5",
+    },
+  ],
+  events: [
+    {
+      id: "launch",
+      label: "Launch",
+      date: "2026-01-03",
+    },
+    {
+      id: "campaign",
+      label: "Campaign window",
+      startDate: "2026-01-05",
+      endDate: "2026-01-06",
+      opacity: 0.18,
+    },
+  ],
 };
+
+const optionsSnippet = `{
+  title: "Revenue vs. Goals",
+  subtitle: "Target lines and event overlays on a time-series line chart.",
+  series: [
+    {
+      id: "revenue",
+      name: "Revenue",
+      xKey: "date",
+      yKey: "revenue"
+    }
+  ],
+  axes: {
+    x: { scaleType: "time" },
+    y: { min: 0, max: 80, grid: true }
+  },
+  trendlines: [
+    { id: "target", type: "target", value: 55, label: "Target" },
+    { id: "goal", type: "target", value: 65, label: "Goal", dashStyle: "3 5" }
+  ],
+  events: [
+    { id: "launch", label: "Launch", date: "2026-01-03" },
+    {
+      id: "campaign",
+      label: "Campaign window",
+      startDate: "2026-01-05",
+      endDate: "2026-01-06",
+      opacity: 0.18
+    }
+  ]
+}`;
+
+const markupSnippet = `<div
+  sx-data="{ data: chartData, options: chartOptions }"
+  sx-chart="data"
+  sx-chart-type="'line'"
+  sx-chart-options="options"
+></div>`;
 ---
 
-<StaticChartExample chartType="line" data={data} options={options} />
+<section class="grid gap-6">
+  <StaticChartExample chartType="line" data={data} options={options} />
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <div class="rounded-xl border border-border bg-card p-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Target Lines</p>
+      <h2 class="mt-2 text-xl font-semibold">Use labeled target trendlines for targets and goals</h2>
+      <p class="mt-3 text-sm leading-6 text-muted-foreground">
+        Add one or more <code>trendlines</code> with <code>type: "target"</code>
+        to render horizontal target markers. The label can be
+        <code>Target</code>, <code>Goal</code>, <code>SLA</code>, or whatever
+        fits the metric.
+      </p>
+    </div>
+
+    <div class="rounded-xl border border-border bg-card p-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Event Overlays</p>
+      <h2 class="mt-2 text-xl font-semibold">Highlight launches, incidents, and campaign windows</h2>
+      <p class="mt-3 text-sm leading-6 text-muted-foreground">
+        Use <code>date</code> for a single vertical event line, or
+        <code>startDate</code> and <code>endDate</code> for a shaded range
+        overlay. Event overlays are designed for charts with a time x-axis.
+      </p>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <section class="rounded-xl border border-border bg-card p-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Options</p>
+      <h2 class="mt-2 text-lg font-semibold">Chart configuration</h2>
+      <pre class="mt-4 overflow-x-auto rounded-lg bg-base-200 p-4 text-sm leading-6"><code>{optionsSnippet}</code></pre>
+    </section>
+
+    <section class="rounded-xl border border-border bg-card p-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.05em] text-primary">Markup</p>
+      <h2 class="mt-2 text-lg font-semibold">SpruceX binding</h2>
+      <pre class="mt-4 overflow-x-auto rounded-lg bg-base-200 p-4 text-sm leading-6"><code>{markupSnippet}</code></pre>
+    </section>
+  </div>
+</section>

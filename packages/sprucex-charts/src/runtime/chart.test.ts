@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
-import { builtinMaps } from "../maps";
 import { createChart, getChartRuntime } from "./chart";
 
 describe("createChart", () => {
@@ -39,7 +38,11 @@ describe("createChart", () => {
     });
 
     expect(container.querySelector("svg")).not.toBeNull();
-    expect(container.querySelectorAll("circle").length).toBeGreaterThan(0);
+    expect(
+      container.querySelector(
+        ".sx-plot path[fill='none'][stroke-linecap='round']",
+      ),
+    ).not.toBeNull();
     expect(
       container.querySelectorAll("[data-sx-chart-anim]").length,
     ).toBeGreaterThan(0);
@@ -59,6 +62,132 @@ describe("createChart", () => {
     expect(container.querySelectorAll("path").length).toBeGreaterThan(0);
     chart.destroy();
     expect(container.innerHTML).toBe("");
+  });
+
+  it("uses the parent height when no explicit height is configured", () => {
+    const parent = document.createElement("div");
+    const container = document.createElement("div");
+    Object.defineProperty(parent, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 320,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 320,
+      }),
+    });
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 0,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 0,
+      }),
+    });
+    parent.appendChild(container);
+    document.body.appendChild(parent);
+
+    const chart = createChart(container, {
+      type: "line",
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "month", yKey: "value" },
+      ],
+      data: [
+        { month: "Jan", value: 12 },
+        { month: "Feb", value: 18 },
+        { month: "Mar", value: 15 },
+      ],
+    });
+
+    expect(container.querySelector("svg")?.getAttribute("height")).toBe("320");
+    expect(getChartRuntime(container)?.context?.height).toBe(320);
+
+    chart.destroy();
+  });
+
+  it("re-renders when the container resizes through ResizeObserver", () => {
+    let resizeCallback: ResizeObserverCallback | undefined;
+    const previousResizeObserver = globalThis.ResizeObserver;
+
+    class ResizeObserverMock {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback;
+      }
+
+      observe() {}
+
+      unobserve() {}
+
+      disconnect() {}
+    }
+
+    Object.defineProperty(globalThis, "ResizeObserver", {
+      value: ResizeObserverMock,
+      configurable: true,
+      writable: true,
+    });
+
+    let width = 820;
+    let height = 320;
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width,
+        height,
+        top: 0,
+        left: 0,
+        right: width,
+        bottom: height,
+      }),
+    });
+    document.body.appendChild(container);
+
+    try {
+      const chart = createChart(container, {
+        type: "bar",
+        series: [
+          { id: "revenue", name: "Revenue", xKey: "month", yKey: "value" },
+        ],
+        data: [
+          { month: "Jan", value: 12 },
+          { month: "Feb", value: 18 },
+          { month: "Mar", value: 15 },
+        ],
+      });
+
+      expect(container.querySelector("svg")?.getAttribute("height")).toBe(
+        "320",
+      );
+
+      width = 640;
+      height = 240;
+      resizeCallback?.([], {} as ResizeObserver);
+
+      expect(container.querySelector("svg")?.getAttribute("width")).toBe("640");
+      expect(container.querySelector("svg")?.getAttribute("height")).toBe(
+        "240",
+      );
+      expect(getChartRuntime(container)?.context?.width).toBe(640);
+      expect(getChartRuntime(container)?.context?.height).toBe(240);
+
+      chart.destroy();
+    } finally {
+      if (previousResizeObserver) {
+        Object.defineProperty(globalThis, "ResizeObserver", {
+          value: previousResizeObserver,
+          configurable: true,
+          writable: true,
+        });
+      } else {
+        Reflect.deleteProperty(
+          globalThis as typeof globalThis & Record<string, unknown>,
+          "ResizeObserver",
+        );
+      }
+    }
   });
 
   it("allows chart render animations to be disabled", () => {
@@ -536,6 +665,45 @@ describe("createChart", () => {
     chart.destroy();
   });
 
+  it("formats compact YYYYMMDD labels for horizontal bars", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "horizontal-bar",
+      animate: false,
+      series: [
+        { id: "pipeline", name: "Pipeline", xKey: "date", yKey: "value" },
+      ],
+      data: [
+        { date: "20260409", value: 28 },
+        { date: "20260410", value: 38 },
+        { date: "20260411", value: 70 },
+      ],
+    });
+
+    const yAxisLabels = Array.from(
+      container.querySelectorAll<SVGTextElement>(".sx-axis-y text"),
+    ).map((node) => node.textContent?.trim() ?? "");
+
+    expect(yAxisLabels).not.toContain("20260409");
+    expect(yAxisLabels).not.toContain("20260410");
+    expect(yAxisLabels).not.toContain("20260411");
+    expect(yAxisLabels.some((label) => label.includes("Apr"))).toBe(true);
+
+    chart.destroy();
+  });
+
   it("clips stacked bars to a single rounded outer shape per stack", () => {
     const container = document.createElement("div");
     Object.defineProperty(container, "getBoundingClientRect", {
@@ -592,7 +760,9 @@ describe("createChart", () => {
     const chart = createChart(container, {
       type: "line",
       animate: false,
-      series: [{ id: "revenue", name: "Revenue", xKey: "month", yKey: "value" }],
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "month", yKey: "value" },
+      ],
       axes: {
         x: { scaleType: "category" },
         y: { grid: true },
@@ -605,14 +775,192 @@ describe("createChart", () => {
     });
 
     const runtime = getChartRuntime(container)!;
-    const circles = Array.from(container.querySelectorAll(".sx-plot circle"));
-    const firstX = Number(circles[0]?.getAttribute("cx"));
-    const lastX = Number(circles[circles.length - 1]?.getAttribute("cx"));
+    const firstX = runtime.context!.interactivePoints[0]?.x;
+    const lastX =
+      runtime.context!.interactivePoints[
+        runtime.context!.interactivePoints.length - 1
+      ]?.x;
 
     expect(firstX).toBe(runtime.context!.cartesian!.plotX);
     expect(lastX).toBe(
       runtime.context!.cartesian!.plotX + runtime.context!.cartesian!.plotWidth,
     );
+
+    chart.destroy();
+  });
+
+  it("renders smooth line paths when series.lineMode is smooth", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "line",
+      animate: false,
+      series: [
+        {
+          id: "revenue",
+          name: "Revenue",
+          xKey: "month",
+          yKey: "value",
+          lineMode: "smooth",
+        },
+      ],
+      axes: {
+        x: { scaleType: "category" },
+        y: { grid: true },
+      },
+      data: [
+        { month: "Jan", value: 12 },
+        { month: "Feb", value: 18 },
+        { month: "Mar", value: 15 },
+      ],
+    });
+
+    const line = container.querySelector<SVGPathElement>(
+      ".sx-plot path[fill='none'][stroke-linecap='round']",
+    );
+
+    expect(line?.getAttribute("d")).toContain("C ");
+
+    chart.destroy();
+  });
+
+  it("defaults line charts to smooth paths with no markers", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "line",
+      animate: false,
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "month", yKey: "value" },
+      ],
+      axes: {
+        x: { scaleType: "category" },
+        y: { grid: true },
+      },
+      data: [
+        { month: "Jan", value: 12 },
+        { month: "Feb", value: 18 },
+        { month: "Mar", value: 15 },
+      ],
+    });
+
+    const line = container.querySelector<SVGPathElement>(
+      ".sx-plot path[fill='none'][stroke-linecap='round']",
+    );
+
+    expect(line?.getAttribute("d")).toContain("C ");
+    expect(container.querySelectorAll(".sx-plot circle")).toHaveLength(0);
+
+    chart.destroy();
+  });
+
+  it("renders stepped area paths when series.lineMode is stepped", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "area",
+      animate: false,
+      series: [
+        {
+          id: "revenue",
+          name: "Revenue",
+          xKey: "month",
+          yKey: "value",
+          lineMode: "stepped",
+        },
+      ],
+      axes: {
+        x: { scaleType: "category" },
+        y: { grid: true },
+      },
+      data: [
+        { month: "Jan", value: 12 },
+        { month: "Feb", value: 18 },
+        { month: "Mar", value: 15 },
+      ],
+    });
+
+    const area = container.querySelector<SVGPathElement>(
+      ".sx-plot path[fill-opacity]",
+    );
+    const path = area?.getAttribute("d") ?? "";
+
+    expect(path).toContain("H ");
+    expect(path).toContain("V ");
+
+    chart.destroy();
+  });
+
+  it("defaults area charts to smooth paths with no markers", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "area",
+      animate: false,
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "month", yKey: "value" },
+      ],
+      axes: {
+        x: { scaleType: "category" },
+        y: { grid: true },
+      },
+      data: [
+        { month: "Jan", value: 12 },
+        { month: "Feb", value: 18 },
+        { month: "Mar", value: 15 },
+      ],
+    });
+
+    const line = container.querySelector<SVGPathElement>(
+      ".sx-plot path[fill='none'][stroke-linecap='round']",
+    );
+
+    expect(line?.getAttribute("d")).toContain("C ");
+    expect(container.querySelectorAll(".sx-plot circle")).toHaveLength(0);
 
     chart.destroy();
   });
@@ -634,7 +982,9 @@ describe("createChart", () => {
     const chart = createChart(container, {
       type: "line",
       animate: false,
-      series: [{ id: "revenue", name: "Revenue", xKey: "month", yKey: "value" }],
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "month", yKey: "value" },
+      ],
       axes: {
         x: { scaleType: "category" },
         y: { grid: true },
@@ -646,7 +996,9 @@ describe("createChart", () => {
       ],
     });
 
-    expect(getChartRuntime(container)!.context!.cartesian!.plotX).toBeGreaterThan(70);
+    expect(
+      getChartRuntime(container)!.context!.cartesian!.plotX,
+    ).toBeGreaterThan(70);
 
     chart.destroy();
   });
@@ -668,7 +1020,9 @@ describe("createChart", () => {
     const chart = createChart(container, {
       type: "line",
       animate: false,
-      series: [{ id: "revenue", name: "Revenue", xKey: "month", yKey: "value" }],
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "month", yKey: "value" },
+      ],
       axes: {
         x: { scaleType: "category" },
         y: { grid: true },
@@ -698,7 +1052,9 @@ describe("createChart", () => {
         bubbles: true,
         clientX: firstPoint.x,
         clientY:
-          runtime.context!.cartesian!.plotY + runtime.context!.cartesian!.plotHeight - 6,
+          runtime.context!.cartesian!.plotY +
+          runtime.context!.cartesian!.plotHeight -
+          6,
       }),
     );
 
@@ -725,7 +1081,13 @@ describe("createChart", () => {
       type: "histogram",
       animate: false,
       series: [{ id: "distribution", name: "Latency", valueKey: "value" }],
-      data: [{ value: 8 }, { value: 11 }, { value: 12 }, { value: 14 }, { value: 18 }],
+      data: [
+        { value: 8 },
+        { value: 11 },
+        { value: 12 },
+        { value: 14 },
+        { value: 18 },
+      ],
     });
 
     const runtime = getChartRuntime(container)!;
@@ -746,7 +1108,9 @@ describe("createChart", () => {
         bubbles: true,
         clientX: firstBucket.x,
         clientY:
-          runtime.context!.cartesian!.plotY + runtime.context!.cartesian!.plotHeight - 4,
+          runtime.context!.cartesian!.plotY +
+          runtime.context!.cartesian!.plotHeight -
+          4,
       }),
     );
 
@@ -804,14 +1168,103 @@ describe("createChart", () => {
     container.dispatchEvent(
       new MouseEvent("pointermove", {
         bubbles: true,
-        clientX: runtime.context!.cartesian!.plotX + runtime.context!.cartesian!.plotWidth - 10,
+        clientX:
+          runtime.context!.cartesian!.plotX +
+          runtime.context!.cartesian!.plotWidth -
+          10,
         clientY: targetPoint.y,
       }),
     );
 
     const crosshair = container.querySelector(".sx-crosshair line");
     expect(runtime.state.hoveredKey).toBe("US");
+    expect(runtime.state.hoveredX).toBe(targetPoint.x);
+    expect(runtime.state.hoveredY).toBe(targetPoint.y);
     expect(crosshair?.getAttribute("y1")).toBe(crosshair?.getAttribute("y2"));
+    expect(Number(crosshair?.getAttribute("y1"))).toBeCloseTo(targetPoint.y, 5);
+    expect(Number(crosshair?.getAttribute("x2"))).toBeCloseTo(targetPoint.x, 5);
+
+    chart.destroy();
+  });
+
+  it("anchors horizontal-bar hover to the hovered grouped bar", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "horizontal-bar",
+      animate: false,
+      series: [
+        { id: "pipeline", name: "Pipeline", xKey: "region", yKey: "pipeline" },
+        { id: "closed", name: "Closed", xKey: "region", yKey: "closed" },
+      ],
+      axes: {
+        x: { scaleType: "category" },
+        y: { grid: true },
+      },
+      data: [
+        { region: "Nordics", pipeline: 28, closed: 18 },
+        { region: "DACH", pipeline: 38, closed: 32 },
+        { region: "US", pipeline: 70, closed: 52 },
+      ],
+    });
+
+    const runtime = getChartRuntime(container)!;
+    Object.defineProperty(runtime.svg, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+
+    const targetPoint = runtime.context!.interactivePoints.find(
+      (point) => point.key === "US" && point.series.id === "closed",
+    )!;
+    const otherPoint = runtime.context!.interactivePoints.find(
+      (point) => point.key === "US" && point.series.id === "pipeline",
+    )!;
+    const targetRect = Array.from(
+      container.querySelectorAll<SVGRectElement>('[data-sx-chart-key="US"]'),
+    ).find((rect) => {
+      const y = Number(rect.getAttribute("y"));
+      const height = Number(rect.getAttribute("height"));
+      return Math.abs(y + height / 2 - targetPoint.y) < 0.5;
+    });
+
+    expect(targetRect).toBeTruthy();
+
+    targetRect!.dispatchEvent(
+      new MouseEvent("pointermove", {
+        bubbles: true,
+        clientX: targetPoint.x,
+        clientY: targetPoint.y,
+      }),
+    );
+
+    const crosshair = container.querySelector(".sx-crosshair line");
+    expect(runtime.state.hoveredKey).toBe("US");
+    expect(runtime.state.hoveredX).toBe(targetPoint.x);
+    expect(runtime.state.hoveredY).toBe(targetPoint.y);
+    expect(Number(crosshair?.getAttribute("y1"))).toBeCloseTo(targetPoint.y, 5);
+    expect(Number(crosshair?.getAttribute("x2"))).toBeCloseTo(targetPoint.x, 5);
+    expect(Number(crosshair?.getAttribute("y1"))).not.toBeCloseTo(
+      otherPoint.y,
+      5,
+    );
 
     chart.destroy();
   });
@@ -852,7 +1305,9 @@ describe("createChart", () => {
       ],
     });
 
-    expect(container.querySelectorAll(".sx-plot rect").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll(".sx-plot rect").length).toBeGreaterThan(
+      0,
+    );
 
     chart.destroy();
   });
@@ -894,12 +1349,471 @@ describe("createChart", () => {
       ],
     });
 
-    const widths = Array.from(container.querySelectorAll(".sx-plot rect[data-sx-chart-key]"))
+    const widths = Array.from(
+      container.querySelectorAll(".sx-plot rect[data-sx-chart-key]"),
+    )
       .map((node) => Number(node.getAttribute("width") ?? 0))
       .filter((width) => width > 0 && width < 820);
 
     expect(widths.every((width) => width <= 18)).toBe(true);
     expect(container.textContent).toContain("12k");
+
+    chart.destroy();
+  });
+
+  it("caps automatic category bar widths for short datasets", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "bar",
+      animate: false,
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "month", yKey: "value" },
+      ],
+      axes: {
+        x: { scaleType: "category" },
+      },
+      data: [
+        { month: "Jan", value: 12 },
+        { month: "Feb", value: 18 },
+      ],
+    });
+
+    const widths = Array.from(
+      container.querySelectorAll<SVGRectElement>(
+        ".sx-plot rect[data-sx-chart-key]",
+      ),
+    ).map((node) => Number(node.getAttribute("width") ?? 0));
+
+    expect(widths).toHaveLength(2);
+    expect(widths[0]).toBeCloseTo(widths[1], 5);
+    expect(widths[0]).toBeLessThanOrEqual(42);
+
+    chart.destroy();
+  });
+
+  it("positions vertical bars at distinct x slots on time axes", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "bar",
+      animate: false,
+      series: [{ id: "revenue", name: "Revenue", xKey: "date", yKey: "value" }],
+      axes: {
+        x: { scaleType: "time" },
+        y: { min: 0, max: 30 },
+      },
+      data: [
+        { date: "2025-01-01T23:00:00", value: 12 },
+        { date: "2025-01-08T23:00:00", value: 18 },
+        { date: "2025-01-15T23:00:00", value: 15 },
+      ],
+    });
+
+    const barX = Array.from(
+      container.querySelectorAll<SVGRectElement>(
+        ".sx-plot rect[data-sx-chart-key]",
+      ),
+    ).map((node) => Number(node.getAttribute("x") ?? 0));
+
+    expect(barX).toHaveLength(3);
+    expect(new Set(barX).size).toBe(3);
+    expect(barX[0]).toBeLessThan(barX[1]);
+    expect(barX[1]).toBeLessThan(barX[2]);
+
+    chart.destroy();
+  });
+
+  it("positions vertical bars at distinct x slots on linear axes", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "bar",
+      animate: false,
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "score", yKey: "value" },
+      ],
+      axes: {
+        x: { scaleType: "linear" },
+        y: { min: 0, max: 30 },
+      },
+      data: [
+        { score: 10, value: 12 },
+        { score: 25, value: 18 },
+        { score: 40, value: 15 },
+      ],
+    });
+
+    const barX = Array.from(
+      container.querySelectorAll<SVGRectElement>(
+        ".sx-plot rect[data-sx-chart-key]",
+      ),
+    ).map((node) => Number(node.getAttribute("x") ?? 0));
+
+    expect(barX).toHaveLength(3);
+    expect(new Set(barX).size).toBe(3);
+    expect(barX[0]).toBeLessThan(barX[1]);
+    expect(barX[1]).toBeLessThan(barX[2]);
+
+    chart.destroy();
+  });
+
+  it("caps automatic widths for single-point continuous bar charts", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "bar",
+      animate: false,
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "score", yKey: "value" },
+      ],
+      axes: {
+        x: { scaleType: "linear" },
+        y: { min: 0, max: 30 },
+      },
+      data: [{ score: 25, value: 18 }],
+    });
+    const runtime = getChartRuntime(container)!;
+
+    const bar = container.querySelector<SVGRectElement>(
+      ".sx-plot rect[data-sx-chart-key]",
+    );
+    const width = Number(bar?.getAttribute("width") ?? 0);
+    const x = Number(bar?.getAttribute("x") ?? 0);
+    const plotX = runtime.context!.cartesian!.plotX;
+    const plotRight = plotX + runtime.context!.cartesian!.plotWidth;
+
+    expect(width).toBeLessThanOrEqual(42);
+    expect(x).toBeGreaterThanOrEqual(plotX);
+    expect(x + width).toBeLessThanOrEqual(plotRight);
+
+    chart.destroy();
+  });
+
+  it("renders dense daily time bars as one slot per day", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "bar",
+      animate: false,
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "date", yKey: "value" },
+      ],
+      data: [
+        { date: "2025-01-01T23:00:00", value: 2 },
+        { date: "2025-01-02T23:00:00", value: 6 },
+        { date: "2025-01-03T23:00:00", value: 4 },
+        { date: "2025-01-04T23:00:00", value: 6 },
+      ],
+    });
+
+    const bars = Array.from(
+      container.querySelectorAll<SVGRectElement>(".sx-plot rect[data-sx-chart-key]"),
+    );
+    const widths = bars.map((node) => Number(node.getAttribute("width") ?? 0));
+
+    expect(bars).toHaveLength(4);
+    expect(widths.every((width) => width > 0)).toBe(true);
+    expect(widths[0]).toBeCloseTo(widths[3], 5);
+
+    chart.destroy();
+  });
+
+  it("fills missing daily buckets for sparse time bars and uses integer count ticks", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "bar",
+      animate: false,
+      series: [
+        {
+          id: "invoices",
+          name: "Amount of invoices per day",
+          xKey: "x",
+          yKey: "value",
+        },
+      ],
+      data: [
+        { x: "2013-07-02", value: 2 },
+        { x: "2013-07-03", value: 1 },
+        { x: "2013-07-04", value: 1 },
+        { x: "2013-07-07", value: 1 },
+        { x: "2013-07-12", value: 1 },
+        { x: "2013-07-20", value: 1 },
+      ],
+    });
+
+    const bars = Array.from(
+      container.querySelectorAll<SVGRectElement>(".sx-plot rect[data-sx-chart-key]"),
+    );
+    const heights = bars.map((node) => Number(node.getAttribute("height") ?? 0));
+    const yAxisLabels = Array.from(
+      container.querySelectorAll<SVGTextElement>(".sx-axis-y text"),
+    ).map((node) => node.textContent?.trim() ?? "");
+
+    expect(bars).toHaveLength(19);
+    expect(heights.some((height) => height === 0)).toBe(true);
+    expect(yAxisLabels).toContain("0");
+    expect(yAxisLabels).toContain("1");
+    expect(yAxisLabels).toContain("2");
+    expect(yAxisLabels.some((label) => label.includes("."))).toBe(false);
+
+    chart.destroy();
+  });
+
+  it("fills missing daily buckets for compact YYYYMMDD bar dates", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "bar",
+      animate: false,
+      series: [
+        {
+          id: "invoices",
+          name: "Amount of invoices per day",
+          xKey: "x",
+          yKey: "value",
+        },
+      ],
+      data: [
+        { x: "20260409", value: 2 },
+        { x: "20260411", value: 1 },
+      ],
+    });
+
+    const bars = Array.from(
+      container.querySelectorAll<SVGRectElement>(
+        ".sx-plot rect[data-sx-chart-key]",
+      ),
+    );
+    const heights = bars.map((node) => Number(node.getAttribute("height") ?? 0));
+    const xAxisLabels = Array.from(
+      container.querySelectorAll<SVGTextElement>(".sx-axis-x text"),
+    ).map((node) => node.textContent?.trim() ?? "");
+
+    expect(bars).toHaveLength(3);
+    expect(heights.some((height) => height === 0)).toBe(true);
+    expect(xAxisLabels).not.toContain("20260409");
+    expect(xAxisLabels).not.toContain("20260410");
+    expect(xAxisLabels).not.toContain("20260411");
+    expect(xAxisLabels.some((label) => label.includes("Apr"))).toBe(true);
+
+    chart.destroy();
+  });
+
+  it("keeps endpoint widths consistent for continuous bar axes", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "bar",
+      animate: false,
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "score", yKey: "value" },
+      ],
+      axes: {
+        x: { scaleType: "linear" },
+        y: { min: 0, max: 30 },
+      },
+      data: [
+        { score: 10, value: 12 },
+        { score: 25, value: 18 },
+        { score: 40, value: 15 },
+      ],
+    });
+    const runtime = getChartRuntime(container)!;
+
+    const bars = Array.from(
+      container.querySelectorAll<SVGRectElement>(
+        ".sx-plot rect[data-sx-chart-key]",
+      ),
+    );
+    const widths = Array.from(bars).map((node) =>
+      Number(node.getAttribute("width") ?? 0),
+    );
+    const x = bars.map((node) => Number(node.getAttribute("x") ?? 0));
+    const plotX = runtime.context!.cartesian!.plotX;
+    const plotRight = plotX + runtime.context!.cartesian!.plotWidth;
+
+    expect(widths).toHaveLength(3);
+    expect(widths[0]).toBeCloseTo(widths[1], 5);
+    expect(widths[1]).toBeCloseTo(widths[2], 5);
+    expect(x[0]).toBeGreaterThan(plotX);
+    expect(x[2] + widths[2]).toBeLessThan(plotRight);
+
+    chart.destroy();
+  });
+
+  it("positions stacked bars at distinct x slots on time axes", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "stacked-bar",
+      animate: false,
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "date", yKey: "revenue" },
+        { id: "pipeline", name: "Pipeline", xKey: "date", yKey: "pipeline" },
+      ],
+      axes: {
+        x: { scaleType: "time" },
+        y: { min: 0, max: 40 },
+      },
+      data: [
+        { date: "2025-01-01T23:00:00", revenue: 12, pipeline: 8 },
+        { date: "2025-01-08T23:00:00", revenue: 18, pipeline: 6 },
+        { date: "2025-01-15T23:00:00", revenue: 15, pipeline: 9 },
+      ],
+    });
+
+    const stackClipX = Array.from(
+      container.querySelectorAll<SVGRectElement>("clipPath rect"),
+    ).map((node) => Number(node.getAttribute("x") ?? 0));
+
+    expect(stackClipX).toHaveLength(3);
+    expect(new Set(stackClipX).size).toBe(3);
+    expect(stackClipX[0]).toBeLessThan(stackClipX[1]);
+    expect(stackClipX[1]).toBeLessThan(stackClipX[2]);
+
+    chart.destroy();
+  });
+
+  it("positions candlesticks at distinct x slots on time axes", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "candlestick",
+      animate: false,
+      series: [{ id: "price", name: "Price", xKey: "date" }],
+      axes: {
+        x: { scaleType: "time" },
+        y: { min: 0, max: 30 },
+      },
+      data: [
+        { date: "2025-01-01T23:00:00", open: 10, high: 16, low: 8, close: 14 },
+        { date: "2025-01-08T23:00:00", open: 14, high: 19, low: 11, close: 12 },
+        { date: "2025-01-15T23:00:00", open: 12, high: 18, low: 10, close: 17 },
+      ],
+    });
+
+    const candleX = Array.from(
+      container.querySelectorAll<SVGRectElement>(".sx-plot rect"),
+    )
+      .filter((node) => node.getAttribute("rx") === "3")
+      .map((node) => Number(node.getAttribute("x") ?? 0));
+
+    expect(candleX).toHaveLength(3);
+    expect(new Set(candleX).size).toBe(3);
+    expect(candleX[0]).toBeLessThan(candleX[1]);
+    expect(candleX[1]).toBeLessThan(candleX[2]);
 
     chart.destroy();
   });
@@ -941,7 +1855,9 @@ describe("createChart", () => {
       ],
     });
 
-    expect(container.querySelectorAll("[data-sx-data-label='true']").length).toBe(3);
+    expect(
+      container.querySelectorAll("[data-sx-data-label='true']").length,
+    ).toBe(3);
     expect(container.textContent).toContain("12");
     expect(container.textContent).toContain("18");
 
@@ -969,7 +1885,13 @@ describe("createChart", () => {
         enabled: true,
       },
       series: [
-        { id: "mix", name: "Mix", xKey: "label", valueKey: "value", labels: true },
+        {
+          id: "mix",
+          name: "Mix",
+          xKey: "label",
+          valueKey: "value",
+          labels: true,
+        },
       ],
       data: [
         { label: "Alpha", value: 12 },
@@ -978,7 +1900,9 @@ describe("createChart", () => {
       ],
     });
 
-    expect(container.querySelectorAll("[data-sx-data-label='true']").length).toBeGreaterThanOrEqual(3);
+    expect(
+      container.querySelectorAll("[data-sx-data-label='true']").length,
+    ).toBeGreaterThanOrEqual(3);
     expect(container.textContent).toContain("12");
     expect(container.textContent).toContain("18");
 
@@ -1004,7 +1928,9 @@ describe("createChart", () => {
       type: "bar",
       animate: false,
       interactions: { drilldown },
-      series: [{ id: "revenue", name: "Revenue", xKey: "month", yKey: "value" }],
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "month", yKey: "value" },
+      ],
       axes: {
         x: { scaleType: "category" },
       },
@@ -1056,12 +1982,254 @@ describe("createChart", () => {
     });
 
     const runtime = getChartRuntime(container)!;
-    const firstPath = container.querySelector("path");
     const plotX = runtime.context!.cartesian!.plotX;
     const plotRight = plotX + runtime.context!.cartesian!.plotWidth;
+    const seriesPoints = runtime
+      .context!.interactivePoints.filter(
+        (point) => point.series.id === "revenue",
+      )
+      .map((point) => point.x);
 
-    expect(firstPath?.getAttribute("d")).toContain(`M ${plotX} `);
-    expect(firstPath?.getAttribute("d")).toContain(`L ${plotRight} `);
+    expect(seriesPoints[0]).toBe(plotX);
+    expect(seriesPoints[seriesPoints.length - 1]).toBe(plotRight);
+
+    chart.destroy();
+  });
+
+  it("renders smooth stacked area paths when series.lineMode is smooth", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "stacked-area",
+      animate: false,
+      series: [
+        {
+          id: "revenue",
+          name: "Revenue",
+          xKey: "month",
+          yKey: "revenue",
+          lineMode: "smooth",
+        },
+        {
+          id: "pipeline",
+          name: "Pipeline",
+          xKey: "month",
+          yKey: "pipeline",
+          lineMode: "smooth",
+        },
+      ],
+      axes: {
+        x: { scaleType: "category" },
+        y: { grid: true },
+      },
+      data: [
+        { month: "Jan", revenue: 38, pipeline: 28 },
+        { month: "Feb", revenue: 54, pipeline: 40 },
+        { month: "Mar", revenue: 70, pipeline: 38 },
+      ],
+    });
+
+    const stackedArea = container.querySelector<SVGPathElement>(
+      ".sx-plot path[fill-opacity]",
+    );
+
+    expect(stackedArea?.getAttribute("d")).toContain("C ");
+
+    chart.destroy();
+  });
+
+  it("defaults stacked area charts to smooth paths", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "stacked-area",
+      animate: false,
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "month", yKey: "revenue" },
+        { id: "pipeline", name: "Pipeline", xKey: "month", yKey: "pipeline" },
+      ],
+      axes: {
+        x: { scaleType: "category" },
+        y: { grid: true },
+      },
+      data: [
+        { month: "Jan", revenue: 38, pipeline: 28 },
+        { month: "Feb", revenue: 54, pipeline: 40 },
+        { month: "Mar", revenue: 70, pipeline: 38 },
+      ],
+    });
+
+    const stackedArea = container.querySelector<SVGPathElement>(
+      ".sx-plot path[fill-opacity]",
+    );
+
+    expect(stackedArea?.getAttribute("d")).toContain("C ");
+    expect(container.querySelectorAll(".sx-plot circle")).toHaveLength(0);
+
+    chart.destroy();
+  });
+
+  it("keeps time-axis labels unique and anchors edge labels inward", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "line",
+      animate: false,
+      legend: { enabled: false },
+      series: [{ id: "revenue", name: "Revenue", xKey: "date", yKey: "value" }],
+      axes: { x: { scaleType: "time" }, y: { min: 0, max: 30 } },
+      data: [
+        { date: "2025-01-01T23:00:00", value: 10 },
+        { date: "2025-01-02T23:00:00", value: 14 },
+        { date: "2025-01-03T23:00:00", value: 16 },
+        { date: "2025-01-04T23:00:00", value: 22 },
+      ],
+    });
+
+    const labels = Array.from(
+      container.querySelectorAll<SVGTextElement>(".sx-axis-x g text"),
+    );
+    const labelText = labels
+      .map((label) => label.textContent ?? "")
+      .filter(Boolean);
+
+    expect(new Set(labelText).size).toBe(labelText.length);
+    expect(labels[0]?.getAttribute("text-anchor")).toBe("start");
+
+    chart.destroy();
+  });
+
+  it("does not render time ticks before the first visible datum", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "line",
+      animate: false,
+      legend: { enabled: false },
+      series: [{ id: "revenue", name: "Revenue", xKey: "date", yKey: "value" }],
+      axes: { x: { scaleType: "time" }, y: { min: 0, max: 30 } },
+      data: [
+        { date: "2024-12-31T23:00:00", value: 10 },
+        { date: "2025-01-14T23:00:00", value: 14 },
+        { date: "2025-01-28T23:00:00", value: 16 },
+        { date: "2025-02-11T23:00:00", value: 22 },
+        { date: "2025-02-26T23:00:00", value: 19 },
+      ],
+    });
+
+    const labelText = Array.from(
+      container.querySelectorAll<SVGTextElement>(".sx-axis-x g text"),
+    )
+      .map((label) => label.textContent ?? "")
+      .filter(Boolean);
+
+    expect(labelText).toContain("Dec 31, 2024");
+    expect(labelText).not.toContain("Dec 30, 2024");
+
+    chart.destroy();
+  });
+
+  it("shows shared tooltips for stacked area charts on time axes", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "stacked-area",
+      animate: false,
+      series: [
+        { id: "revenue", name: "Revenue", xKey: "date", yKey: "revenue" },
+        { id: "pipeline", name: "Pipeline", xKey: "date", yKey: "pipeline" },
+      ],
+      axes: {
+        x: { scaleType: "time" },
+        y: { min: 0, max: 30 },
+      },
+      data: [
+        { date: "2025-01-01T23:00:00", revenue: 10, pipeline: 4 },
+        { date: "2025-01-02T23:00:00", revenue: 14, pipeline: 6 },
+        { date: "2025-01-03T23:00:00", revenue: 16, pipeline: 5 },
+      ],
+    });
+
+    const runtime = getChartRuntime(container)!;
+    Object.defineProperty(runtime.svg, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+
+    const firstPoint = runtime.context!.interactivePoints[0];
+    container.dispatchEvent(
+      new MouseEvent("pointermove", {
+        bubbles: true,
+        clientX: firstPoint.x,
+        clientY: firstPoint.y,
+      }),
+    );
+
+    expect(runtime.state.hoveredKey).toBe(Date.parse("2025-01-01T23:00:00"));
+    expect(runtime.tooltip.classList.contains("is-visible")).toBe(true);
+    expect(runtime.tooltip.innerHTML).toContain("Revenue");
+    expect(runtime.tooltip.innerHTML).toContain("Pipeline");
 
     chart.destroy();
   });
@@ -1150,7 +2318,9 @@ describe("createChart", () => {
     expect(
       container.querySelector('[data-sx-trendline="goal"]'),
     ).not.toBeNull();
-    expect(container.querySelector("[data-sx-gauge-needle='true']")).not.toBeNull();
+    expect(
+      container.querySelector("[data-sx-gauge-needle='true']"),
+    ).not.toBeNull();
     expect(container.textContent).toContain("Goal");
     expect(container.textContent).toContain("0");
     expect(container.textContent).toContain("100");
@@ -1293,22 +2463,53 @@ describe("createChart", () => {
     });
     document.body.appendChild(container);
 
+    const customTopology = {
+      type: "Topology",
+      objects: {
+        regions: {
+          type: "GeometryCollection",
+          geometries: [
+            { type: "Polygon", id: "A", arcs: [[0]] },
+            { type: "Polygon", id: "B", arcs: [[1]] },
+          ],
+        },
+      },
+      arcs: [
+        [
+          [0, 0],
+          [20, 0],
+          [0, 20],
+          [-20, 0],
+          [0, -20],
+        ],
+        [
+          [30, 0],
+          [20, 0],
+          [0, 20],
+          [-20, 0],
+          [0, -20],
+        ],
+      ],
+    } as const;
+
     const chart = createChart(container, {
       type: "map",
       animate: false,
-      series: [{ id: "states", name: "States", xKey: "id", valueKey: "value" }],
+      series: [
+        { id: "regions", name: "Regions", xKey: "id", valueKey: "value" },
+      ],
       map: {
-        source: builtinMaps["us-states"],
-        objectKey: "states",
+        source: customTopology,
+        objectKey: "regions",
         valueKey: "value",
       },
       data: [
-        { id: "06", value: 18 },
-        { id: "48", value: 12 },
+        { id: "A", value: 18 },
+        { id: "B", value: 12 },
       ],
     });
 
-    expect(container.querySelectorAll("path").length).toBeGreaterThan(40);
+    expect(container.querySelectorAll("path").length).toBe(2);
     chart.destroy();
   });
 
@@ -1421,6 +2622,56 @@ describe("createChart", () => {
     chart.destroy();
   });
 
+  it("matches built-in world map regions by ISO alpha-2 country code", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "map",
+      animate: false,
+      series: [
+        {
+          id: "countries",
+          name: "Countries",
+          xKey: "id",
+          valueKey: "value",
+          color: "#2667ff",
+        },
+      ],
+      map: {
+        source: "world",
+        projection: "equal-earth",
+        valueKey: "value",
+      },
+      data: [
+        { id: "se", value: 10 },
+        { id: "US", value: 30 },
+      ],
+    });
+
+    const swedenRegion = container.querySelector('[data-sx-chart-key="752"]');
+    const unitedStatesRegion = container.querySelector(
+      '[data-sx-chart-key="840"]',
+    );
+    const germanyRegion = container.querySelector('[data-sx-chart-key="276"]');
+
+    expect(swedenRegion?.getAttribute("fill")).toBe("#2667ff");
+    expect(unitedStatesRegion?.getAttribute("fill")).toBe("#2667ff");
+    expect(germanyRegion?.getAttribute("fill")).not.toBe("#2667ff");
+
+    chart.destroy();
+  });
+
   it("renders map point overlays with configurable radius", () => {
     const container = document.createElement("div");
     Object.defineProperty(container, "getBoundingClientRect", {
@@ -1459,6 +2710,54 @@ describe("createChart", () => {
     );
     expect(overlays.length).toBe(2);
     expect(overlays[0]?.getAttribute("r")).toBe("9");
+
+    chart.destroy();
+  });
+
+  it("places map point overlays by ISO alpha-2 country code", () => {
+    const container = document.createElement("div");
+    Object.defineProperty(container, "getBoundingClientRect", {
+      value: () => ({
+        width: 820,
+        height: 460,
+        top: 0,
+        left: 0,
+        right: 820,
+        bottom: 460,
+      }),
+    });
+    document.body.appendChild(container);
+
+    const chart = createChart(container, {
+      type: "map",
+      animate: false,
+      series: [
+        {
+          id: "countries",
+          name: "Countries",
+          xKey: "id",
+          valueKey: "value",
+        },
+      ],
+      map: {
+        source: "world",
+        projection: "equal-earth",
+        valueKey: "value",
+        pointKey: "marker",
+        pointRadius: 8,
+      },
+      data: [
+        { id: "SE", marker: "se", value: 10 },
+        { id: "NL", marker: "NL", value: 30 },
+      ],
+    });
+
+    const overlays = Array.from(
+      container.querySelectorAll('[data-sx-chart-key^="point:"]'),
+    );
+
+    expect(overlays).toHaveLength(2);
+    expect(overlays[0]?.getAttribute("r")).toBe("8");
 
     chart.destroy();
   });
