@@ -1574,7 +1574,7 @@ describe("createChart", () => {
     chart.destroy();
   });
 
-  it("fills missing daily buckets for sparse time bars and uses integer count ticks", () => {
+  it("retains sparse time bucket positions without inventing zero bars", () => {
     const container = document.createElement("div");
     Object.defineProperty(container, "getBoundingClientRect", {
       value: () => ({
@@ -1617,8 +1617,8 @@ describe("createChart", () => {
       container.querySelectorAll<SVGTextElement>(".sx-axis-y text"),
     ).map((node) => node.textContent?.trim() ?? "");
 
-    expect(bars).toHaveLength(19);
-    expect(heights.some((height) => height === 0)).toBe(true);
+    expect(bars).toHaveLength(6);
+    expect(heights.some((height) => height === 0)).toBe(false);
     expect(yAxisLabels).toContain("0");
     expect(yAxisLabels).toContain("1");
     expect(yAxisLabels).toContain("2");
@@ -1627,7 +1627,7 @@ describe("createChart", () => {
     chart.destroy();
   });
 
-  it("fills missing daily buckets for compact YYYYMMDD bar dates", () => {
+  it("retains sparse compact YYYYMMDD dates without inventing zero bars", () => {
     const container = document.createElement("div");
     Object.defineProperty(container, "getBoundingClientRect", {
       value: () => ({
@@ -1668,8 +1668,8 @@ describe("createChart", () => {
       container.querySelectorAll<SVGTextElement>(".sx-axis-x text"),
     ).map((node) => node.textContent?.trim() ?? "");
 
-    expect(bars).toHaveLength(3);
-    expect(heights.some((height) => height === 0)).toBe(true);
+    expect(bars).toHaveLength(2);
+    expect(heights.some((height) => height === 0)).toBe(false);
     expect(xAxisLabels).not.toContain("20260409");
     expect(xAxisLabels).not.toContain("20260410");
     expect(xAxisLabels).not.toContain("20260411");

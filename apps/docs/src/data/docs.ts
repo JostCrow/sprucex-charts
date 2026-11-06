@@ -28,6 +28,12 @@ export interface DocPage {
 
 export const docPages: readonly DocPage[] = [
   {
+    browserTitle: "SpruceX Charts | BI Integration",
+    description: "Faithful values, portable card configuration, compact layouts and dashboard events.",
+    heading: "BI integration", href: "/bi-integration", navLabel: "BI integration",
+    section: "documentation", slug: "bi-integration", variant: "standard",
+  },
+  {
     browserTitle: "SpruceX Charts | Overview",
     description:
       "Most charting libraries demand weeks of configuration. SpruceX Charts works the opposite way—most of the time, it just works. Define your data, pick a chart type, and you're done.",

@@ -39,11 +39,18 @@ export interface Padding {
 export type ValueFormat =
   | { type: "text" }
   | { type: "number"; options?: Intl.NumberFormatOptions }
-  | { type: "percent"; options?: Intl.NumberFormatOptions }
+  | {
+      type: "percent";
+      encoding?: "fraction" | "whole-percent";
+      options?: Intl.NumberFormatOptions;
+    }
   | { type: "currency"; currency: string; options?: Intl.NumberFormatOptions }
   | { type: "date"; options?: Intl.DateTimeFormatOptions };
 
 export interface AxisConfig {
+  /** Opt-in measured label thinning and truncation. */
+  labelDensity?: "all" | "auto";
+  maxLabelWidth?: number;
   format?: ValueFormat;
   enabled?: boolean;
   scaleType?: ScaleType;
@@ -58,6 +65,9 @@ export interface AxisConfig {
 }
 
 export interface LegendConfig {
+  /** Wrap and paginate to one row; truncate labels to maxLabelWidth. */
+  compact?: boolean;
+  maxLabelWidth?: number;
   enabled?: boolean;
   position?: LegendPosition;
   layout?: LegendLayout;
@@ -139,6 +149,8 @@ export interface ThemeConfig {
 }
 
 export interface BaseSeriesConfig {
+  /** Line/area only. Defaults to connect for compatibility. */
+  missingValues?: "connect" | "gap";
   id?: string;
   name?: string;
   type?: ChartType;
@@ -184,6 +196,10 @@ export interface MapConfig {
 export type SeriesConfig = BaseSeriesConfig | SankeySeriesConfig;
 
 export interface ChartOptions {
+  /** Hide overlapping point labels after measuring their rendered bounds. */
+  labelDensity?: "all" | "auto";
+  /** Shared field display rules; explicit series/axis formats take precedence. */
+  fieldFormats?: Record<string, ValueFormat>;
   hiddenSeries?: string[];
   type?: ChartType;
   data?: Record<string, unknown>[] | Record<string, unknown>;
@@ -238,6 +254,26 @@ export interface ChartState {
   panOffsetX?: number;
 }
 
+export interface ChartExportOptions {
+  values?: "raw" | "formatted";
+}
+
+export interface ChartSelectionEvent {
+  key: string | number;
+  seriesId?: string;
+  datum: Record<string, unknown>;
+}
+
+export interface ChartRangeEvent {
+  source: "brush" | "zoom" | "pan";
+  /** Numeric horizontal domain (value domain for horizontal bars); time uses epoch milliseconds. */
+  range: [number, number];
+}
+
+export interface ChartResetEvent {
+  source: "double-click";
+}
+
 export interface ExportResult {
   content: string | Blob;
   mimeType: string;
@@ -252,7 +288,10 @@ export interface ChartInstance {
   update(nextConfig: ChartOptions): void;
   setData(nextData: Record<string, unknown>[] | Record<string, unknown>): void;
   resize(): void;
-  export(format: "svg" | "png" | "csv"): Promise<ExportResult>;
+  export(
+    format: "svg" | "png" | "csv" | "json",
+    options?: ChartExportOptions,
+  ): Promise<ExportResult>;
   destroy(): void;
   getState(): ChartState;
 }
@@ -277,4 +316,12 @@ export interface SpruceXLike {
       teardown?: (component: SpruceXComponentLike) => void;
     },
   ): void;
+}
+
+/** Detail payloads for bubbling DOM CustomEvents on the chart host. */
+export interface ChartInteractionEventMap {
+  "sx-chart:selection": ChartSelectionEvent;
+  "sx-chart:range": ChartRangeEvent;
+  "sx-chart:reset": ChartResetEvent;
+  "sx-chart:configchange": ChartConfigChangeEvent;
 }
