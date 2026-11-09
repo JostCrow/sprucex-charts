@@ -1,0 +1,91 @@
+---
+import DocsPageShell from "../components/DocsPageShell.astro";
+import { requireDocPage } from "../data/docs";
+const config = `{
+  "type": "line",
+  "locale": "en-US",
+  "fieldFormats": {
+    "conversion": { "type": "percent", "encoding": "fraction" }
+  },
+  "series": [{
+    "id": "conversion", "name": "Conversion rate",
+    "xKey": "day", "yKey": "conversion",
+    "missingValues": "gap", "labels": true
+  }],
+  "axes": {
+    "x": { "scaleType": "time", "labelDensity": "auto", "maxLabelWidth": 90 },
+    "y": { "min": 0 }
+  },
+  "labelDensity": "auto",
+  "legend": { "compact": true, "maxLabelWidth": 120 },
+  "tooltip": { "shared": true },
+  "interactions": { "brush": true, "zoom": true, "pan": true },
+  "syncGroup": "dashboard-preview"
+}`;
+const binding = `<section sx-data="biCard">
+  <div sx-chart="rows" sx-chart-config="presentation"
+    sx-on:sx-chart:selection="selection = $event.detail"
+    sx-on:sx-chart:range="range = $event.detail"
+    sx-on:sx-chart:reset="range = null"></div>
+</section>`;
+const api = `import { getChartInstance } from "sprucex-charts";
+import type { ChartConfiguration, ChartRangeEvent } from "sprucex-charts";
+
+// After the SpruceX chart binding has mounted:
+const chart = getChartInstance(host)!;
+const presentation: ChartConfiguration = chart.getConfig();
+chart.setConfig(presentation); // replaces config; retains current rows
+chart.setData(questionResult); // replaces rows; retains presentation
+await chart.export("json"); // raw numbers, strings, booleans, null
+await chart.export("csv", { values: "formatted" }); // display strings
+// export still downloads a file and returns ExportResult.
+// A range listener receives CustomEvent<ChartRangeEvent>.
+const range: ChartRangeEvent = {
+  source: "brush", range: [1735689600000, 1738368000000]
+};`;
+---
+<DocsPageShell page={requireDocPage("bi-integration")}>
+  <div class="space-y-8">
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold">Keep data and presentation separate</h2>
+      <p>Questions retrieve and aggregate rows. Cards own chart configuration. Dashboards own shared filters and layout. Charts only render supplied data and report interactions; they do not calculate business metrics, execute queries, store tenant state, or construct dashboard URLs.</p>
+      <p>Already available: shared tooltips, syncGroup hover coordination, drilldown callbacks, brush/zoom/pan, getConfig/setConfig, sx-chart-config, configchange, and SVG/PNG/CSV exports. New here: explicit missingValues, percentage encoding, fieldFormats, measured label density, compact legends, JSON/formatted exports, and typed selection/range/reset events.</p>
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold">A persistable card configuration</h2>
+      <pre class="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{config}</code></pre>
+      <p>Register a SpruceX component named biCard with rows, presentation (the configuration above), selection, and range state. Bind it using the existing chart integration:</p>
+      <pre class="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{binding}</code></pre>
+      <p>sx-chart-config writes configuration changes such as legend visibility back to presentation. Save that object separately from rows. getConfig returns a detached snapshot excluding top-level data; setConfig replaces configuration while retaining rows. update keeps its existing shallow merge behavior.</p>
+      <p>Use declarative formats and ISO date strings for JSON storage. Functions (series format, tickFormat, tooltip formatter/conditional, legend labelFormatter, drilldown, donut formatter) are runtime-only and must be reattached after loading. Existing embedded data such as volumeOverlay.data, Sankey nodes/links, and custom map geometry remain part of the snapshot: externalize those explicitly if your persistence policy excludes datasets. JSON-safe does not mean every possible ChartConfiguration is JSON-serializable.</p>
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold">Missing observations and zero</h2>
+      <p>Null, undefined, non-finite numbers, and empty strings are missing numeric observations. Zero remains a real value. Missing values are excluded from numeric domains, histogram samples, labels and point tooltips. Line and area series retain the existing connect default; missingValues: "gap" splits paths and area fills at missing observations, including combo and multi-axis line/area series.</p>
+      <p>Bars omit missing marks and retain category slots. Stacks omit missing contributions; stacked areas connect available observations (the gap option applies to ordinary line/area series). Pie, polar, funnel, treemap, heatmap and box plots omit missing values. Radar uses categories with complete observations across visible series. A missing gauge has no value mark. Missing map regions use the muted theme color and “No data”; missing financial OHLC observations are omitted. Missing histogram samples do not enter a zero bucket. Sankey nodes may infer their sizes from valid links; invalid link values are omitted.</p>
+      <p>No observations are imputed. If a product needs complete time buckets or business-specific missing categories, the question result must supply those rows.</p>
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold">Formats and export</h2>
+      <p>fieldFormats maps raw field names to declarative ValueFormat rules. The same rule feeds point labels, default tooltips and formatted export. Axes inherit a field rule when all their series agree; explicit axis format or tickFormat wins for ticks. Explicit series format wins for points. Mixed-unit axes should declare their own format or use y2. Custom tooltip callbacks still own their output.</p>
+      <p>Percent encoding defaults to fraction: 0.25 displays as 25%. Use encoding: "whole-percent" when 25 means 25%. No magnitude-based guessing or rescaling of data/domains occurs. Formatting does not change the existing percentage scale behavior. Existing number, currency, date, locale and timeZone defaults remain intact.</p>
+      <pre class="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{api}</code></pre>
+      <p>Raw is the export default. JSON preserves JSON-compatible raw types; undefined object properties are omitted and Dates serialize as ISO strings. CSV is text, with standard doubled-quote escaping; missing cells are empty. Formatted export uses the first configured matching series for a repeated field; use fieldFormats for a single unambiguous export format. Exports include supplied rows, independent of legend hiding and zoom.</p>
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold">Compact layouts</h2>
+      <p>Axis labelDensity: "auto" measures rendered bounds and hides collisions without removing ticks or data. maxLabelWidth truncates text in pixels and retains the full label in an SVG title. Chart labelDensity: "auto" suppresses overlapping point labels. These settings are opt-in; existing all-label defaults remain. Measurement reruns on chart resize. Headless environments without SVG measurement retain labels rather than inventing collisions.</p>
+      <p>legend.compact wraps entries and uses the existing single-row pagination controls. maxLabelWidth bounds each label and preserves its full text in a title. Existing legend position, alignment, toggle, pagination and scroll settings remain available. Supply a sensible card height; the chart retains its existing minimum plot dimensions.</p>
+    </section>
+    <section class="space-y-3">
+      <h2 class="text-xl font-semibold">Dashboard interaction contracts</h2>
+      <ul class="list-disc space-y-2 pl-6">
+        <li>sx-chart:selection: ChartSelectionEvent with key, optional seriesId, and detached raw datum. Fires on a resolved point click before the existing drilldown callback; legend clicks do not select points. Give series stable ids.</li>
+        <li>sx-chart:range: ChartRangeEvent with source (brush, zoom, pan) and numeric range tuple. Fires after an accepted brush, each wheel zoom, or pan completion. Time domains use epoch milliseconds; horizontal bars report their horizontal value domain. Brush is available only on zoomable scales; with pan enabled, hold Shift to brush.</li>
+        <li>sx-chart:reset: ChartResetEvent with source: "double-click". Fires on double-click unless resetZoom is false. It clears the local zoom domain.</li>
+        <li>sx-chart:configchange: existing ChartConfigChangeEvent with config. Transient selection/range/reset do not modify persisted configuration.</li>
+      </ul>
+      <p>These CustomEvents bubble from the chart host. ChartInteractionEventMap exports their detail types. Programmatic configuration/data updates do not emit range events. The application translates ranges and selections into dashboard context and supplies new question results. syncGroup continues to coordinate hover only; it does not execute queries or synchronize range state.</p>
+    </section>
+  </div>
+</DocsPageShell>

@@ -489,12 +489,14 @@ var SpruceXCharts = (() => {
     return Math.max(minValue2, Math.min(maxValue2, value));
   }
   function sumValues(values) {
-    return values.reduce((total, value) => total + value, 0);
+    return values.filter(Number.isFinite).reduce((total, value) => total + value, 0);
   }
   function maxValue(values) {
+    values = values.filter(Number.isFinite);
     return values.length ? Math.max(...values) : 0;
   }
   function minValue(values) {
+    values = values.filter(Number.isFinite);
     return values.length ? Math.min(...values) : 0;
   }
   function unique(values) {
@@ -575,15 +577,16 @@ var SpruceXCharts = (() => {
     return void 0;
   }
   function toNumber(value) {
+    if (value == null || typeof value === "string" && !value.trim()) return NaN;
     if (value instanceof Date) return value.getTime();
-    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
     if (typeof value === "string") {
       const numeric = Number(value);
       if (!Number.isNaN(numeric)) return numeric;
       const parsed = parseDateString(value);
       if (parsed != null) return parsed;
     }
-    return 0;
+    return NaN;
   }
   function parseTickFormat(pattern, value) {
     const decimalsMatch = pattern.match(/\.(\d+)/);
@@ -600,7 +603,11 @@ var SpruceXCharts = (() => {
       if (timestamp == null) return String(value ?? "");
       return new Intl.DateTimeFormat(locale, {
         timeZone,
-        ...format.options ?? { month: "short", day: "numeric", year: "numeric" }
+        ...format.options ?? {
+          month: "short",
+          day: "numeric",
+          year: "numeric"
+        }
       }).format(new Date(timestamp));
     }
     const numeric = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN;
@@ -610,7 +617,9 @@ var SpruceXCharts = (() => {
       ...format.options,
       style: format.type === "currency" ? "currency" : format.type === "percent" ? "percent" : "decimal",
       ...format.type === "currency" ? { currency: format.currency } : {}
-    }).format(numeric);
+    }).format(
+      format.type === "percent" && format.encoding === "whole-percent" ? numeric / 100 : numeric
+    );
   }
   function formatValue(value, axis, locale = "en-US", timeZone) {
     if (axis?.tickFormat && typeof axis.tickFormat === "function") {
@@ -637,10 +646,34 @@ var SpruceXCharts = (() => {
     }
     return String(value ?? "");
   }
+  function seriesValueKey(series, config) {
+    const type = series?.type ?? config.type;
+    if (type === "map")
+      return config.map?.valueKey ?? series?.valueKey ?? "value";
+    if (["pie", "polar", "treemap", "funnel", "gauge", "heatmap"].includes(
+      type ?? ""
+    ))
+      return series?.valueKey ?? "value";
+    return series?.yKey ?? series?.valueKey ?? (["radar", "box-plot"].includes(type ?? "") ? "value" : "y");
+  }
   function formatSeriesValue(value, series, axis, config) {
+    if (value == null) return "";
     if (series?.format) {
-      return typeof series.format === "function" ? series.format(value) : formatDisplay(value, series.format, config.locale ?? "en-US", config.timeZone);
+      return typeof series.format === "function" ? series.format(value) : formatDisplay(
+        value,
+        series.format,
+        config.locale ?? "en-US",
+        config.timeZone
+      );
     }
+    const fieldFormat = config.fieldFormats?.[seriesValueKey(series, config)];
+    if (fieldFormat)
+      return formatDisplay(
+        value,
+        fieldFormat,
+        config.locale ?? "en-US",
+        config.timeZone
+      );
     return formatValue(value, axis, config.locale, config.timeZone);
   }
   function escapeHtml(value) {
@@ -931,7 +964,11 @@ var SpruceXCharts = (() => {
   }
   function startOfLocalDay(value) {
     const date = new Date(value);
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+    return new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    ).getTime();
   }
   function startOfLocalWeek(value) {
     const date = new Date(startOfLocalDay(value));
@@ -1013,7 +1050,7 @@ var SpruceXCharts = (() => {
         row[xKey] = new Date(bucket);
       });
       valueKeys.forEach((valueKey) => {
-        row[valueKey] = 0;
+        row[valueKey] = void 0;
       });
       bucketMap.set(bucket, row);
     });
@@ -1022,7 +1059,8 @@ var SpruceXCharts = (() => {
       const row = bucketMap.get(bucket);
       if (!row) return;
       valueKeys.forEach((valueKey) => {
-        row[valueKey] = toNumber(row[valueKey]) + toNumber(datum[valueKey]);
+        if (Number.isFinite(toNumber(datum[valueKey])))
+          row[valueKey] = (Number.isFinite(toNumber(row[valueKey])) ? toNumber(row[valueKey]) : 0) + toNumber(datum[valueKey]);
       });
     });
     return {
@@ -1201,7 +1239,9 @@ var SpruceXCharts = (() => {
     base = 30
   } = {}) {
     const labelWidth = rotatedLabelWidth(
-      labels,
+      labels.map(
+        (label) => axis?.maxLabelWidth ? truncateLabel(label, axis.maxLabelWidth, fontSize) : label
+      ),
       axis?.labelRotation ?? 0,
       fontSize
     );
@@ -1343,6 +1383,7 @@ var SpruceXCharts = (() => {
     };
   }
   function createPieSlices(data, valueKey) {
+    data = data.filter((datum) => Number.isFinite(toNumber(datum[valueKey])));
     const values = data.map((datum) => Math.max(0, toNumber(datum[valueKey])));
     const total = sumValues(values) || 1;
     let currentAngle = 0;
@@ -1355,6 +1396,7 @@ var SpruceXCharts = (() => {
     });
   }
   function histogram(values, bucketCount = 10) {
+    values = values.filter(Number.isFinite);
     if (!values.length) return [];
     const min = minValue(values);
     const max = maxValue(values);
@@ -1378,10 +1420,10 @@ var SpruceXCharts = (() => {
     return keys.map(
       (key, seriesIndex) => data.map((datum, datumIndex) => {
         const start = keys.slice(0, seriesIndex).reduce(
-          (total, previousKey) => total + toNumber(data[datumIndex][previousKey]),
+          (total, previousKey) => total + (Number.isFinite(toNumber(data[datumIndex][previousKey])) ? toNumber(data[datumIndex][previousKey]) : 0),
           0
         );
-        const end = start + toNumber(datum[key]);
+        const end = start + (Number.isFinite(toNumber(datum[key])) ? toNumber(datum[key]) : 0);
         return [start, end, datum, key];
       })
     );
@@ -1425,6 +1467,7 @@ var SpruceXCharts = (() => {
     });
   }
   function createSankeyLayout(nodesInput, linksInput, x, y, width, height) {
+    linksInput = linksInput.filter((link) => Number.isFinite(link.value));
     const nodeMap = /* @__PURE__ */ new Map();
     nodesInput.forEach((node) => {
       nodeMap.set(node.id, {
@@ -1865,10 +1908,13 @@ var SpruceXCharts = (() => {
     return `<circle cx="0" cy="0" r="5" fill="${hidden ? "transparent" : color}" stroke="${color}" stroke-width="2" />`;
   }
   function estimateLegendItemWidth(config, label) {
-    return 34 + legendItemLabel(config, label).length * 7 + (config.legend?.itemSpacing ?? 18);
+    return 34 + Math.min(
+      approximateTextWidth(legendItemLabel(config, label), 12),
+      config.legend?.maxLabelWidth ?? (config.legend?.compact ? 120 : Infinity)
+    ) + (config.legend?.itemSpacing ?? 18);
   }
   function buildLegendRows(entries, config, availableWidth) {
-    const layout = config.legend?.layout ?? (["left", "right"].includes(resolveLegendPosition(config)) ? "vertical" : "horizontal");
+    const layout = (config.legend?.compact ? "wrapped" : config.legend?.layout) ?? (["left", "right"].includes(resolveLegendPosition(config)) ? "vertical" : "horizontal");
     const rows = [];
     if (layout === "vertical") {
       return entries.map((entry) => [entry]);
@@ -1899,7 +1945,7 @@ var SpruceXCharts = (() => {
       return 0;
     }
     const rows = buildLegendRows(legendEntries, config, availableWidth);
-    const pageable = (config.legend?.pagination || config.legend?.scroll) && rows.length > 1;
+    const pageable = (config.legend?.compact || config.legend?.pagination || config.legend?.scroll) && rows.length > 1;
     return (pageable ? 58 : 18) + Math.max(1, pageable ? 1 : rows.length) * 22;
   }
   function legendBlockWidth(config, legendEntries, availableWidth) {
@@ -1919,10 +1965,9 @@ var SpruceXCharts = (() => {
   }
   function renderLegend(entries, theme, state, config, availableWidth, runtime) {
     const rows = buildLegendRows(entries, config, availableWidth);
-    const itemSpacing = config.legend?.itemSpacing ?? 18;
     const alignment = config.legend?.alignment ?? "start";
     const shape = config.legend?.itemShape ?? "dot";
-    const pageable = (config.legend?.pagination || config.legend?.scroll) && rows.length > 1;
+    const pageable = (config.legend?.compact || config.legend?.pagination || config.legend?.scroll) && rows.length > 1;
     const page = pageable ? clamp(runtime.legendPage, 0, rows.length - 1) : 0;
     runtime.legendPage = page;
     const visibleRows = pageable ? rows.slice(page, page + 1) : rows;
@@ -1942,7 +1987,7 @@ var SpruceXCharts = (() => {
       ${renderLegendMarker(shape, item.color, hidden)}
       <text x="12" y="4" fill="${hidden ? theme.muted : theme.foreground}" font-size="12">${escapeHtml(label)}</text>
     </g>`;
-        cursorX += width + itemSpacing;
+        cursorX += width;
         return markup;
       }).join("");
     }).join("");
@@ -1989,8 +2034,8 @@ var SpruceXCharts = (() => {
   function pointsForLine(data, series, xToCoord, yToCoord) {
     return data.map((datum) => {
       const rawX = datum[series.xKey ?? "x"];
-      const rawY = datum[series.yKey ?? "y"];
-      if (rawY == null) return null;
+      const rawY = datum[series.yKey ?? series.valueKey ?? "y"];
+      if (!Number.isFinite(toNumber(rawY)) || rawX == null) return null;
       return {
         point: { x: xToCoord(rawX), y: yToCoord(toNumber(rawY)) },
         rawX,
@@ -2210,7 +2255,8 @@ var SpruceXCharts = (() => {
     );
     const slices = createPieSlices(visibleData, valueKey);
     const total = sumValues(slices.map((slice) => slice.value)) || 1;
-    const sliceMarkup = slices.map((slice, index) => {
+    const sliceMarkup = slices.map((slice) => {
+      const index = data.indexOf(slice.datum);
       const color = ctx.theme.palette?.[index % (ctx.theme.palette?.length ?? 1)] ?? series?.color ?? "var(--primary)";
       const label = String(slice.datum[labelKey] ?? `Slice ${index + 1}`);
       const isHovered = String(runtime.state.hoveredKey ?? "") === label;
@@ -2274,6 +2320,9 @@ var SpruceXCharts = (() => {
     return `${sliceMarkup}${centerMarkup}`;
   }
   function renderFunnel(data, config, ctx, series, runtime) {
+    data = data.filter(
+      (datum) => Number.isFinite(toNumber(datum[series.valueKey ?? "value"]))
+    );
     const labelKey = series.xKey ?? "label";
     const valueKey = series.valueKey ?? "value";
     const max = maxValue(data.map((datum) => toNumber(datum[valueKey]))) || 1;
@@ -2294,12 +2343,7 @@ var SpruceXCharts = (() => {
         y: y + segmentHeight / 2,
         key: String(datum[labelKey] ?? index),
         label: String(datum[labelKey] ?? `Stage ${index + 1}`),
-        value: formatValue(
-          value,
-          config.axes?.y,
-          config.locale,
-          config.timeZone
-        ),
+        value: formatSeriesValue(value, series, config.axes?.y, config),
         raw: datum,
         series
       });
@@ -2313,6 +2357,8 @@ var SpruceXCharts = (() => {
     }).join("");
   }
   function renderGauge(data, config, ctx, series, runtime) {
+    if (!Number.isFinite(toNumber(data[0]?.[series.valueKey ?? "value"])))
+      return "";
     const value = toNumber(data[0]?.[series.valueKey ?? "value"] ?? 0);
     const min = Number(config.axes?.y?.min ?? 0);
     const max = Number(config.axes?.y?.max ?? 100);
@@ -2443,6 +2489,11 @@ var SpruceXCharts = (() => {
     );
   }
   function renderRadar(data, config, ctx, visibleSeries, runtime) {
+    data = data.filter(
+      (datum) => visibleSeries.every(
+        (series) => Number.isFinite(toNumber(datum[series.yKey ?? "value"]))
+      )
+    );
     const categories = data.map(
       (datum) => String(datum[visibleSeries[0]?.xKey ?? "label"] ?? "")
     );
@@ -2482,11 +2533,11 @@ var SpruceXCharts = (() => {
           y: point.y,
           key: String(datum[series.xKey ?? "label"] ?? pointIndex),
           label: `${series.name ?? `Series ${seriesIndex + 1}`} / ${String(datum[series.xKey ?? "label"] ?? pointIndex)}`,
-          value: formatValue(
+          value: formatSeriesValue(
             datum[series.yKey ?? "value"],
+            series,
             config.axes?.y,
-            config.locale,
-            config.timeZone
+            config
           ),
           raw: datum,
           series
@@ -2512,6 +2563,9 @@ var SpruceXCharts = (() => {
     return `${rings}${seriesMarkup}${labels}`;
   }
   function renderPolar(data, config, ctx, series, runtime) {
+    data = data.filter(
+      (datum) => Number.isFinite(toNumber(datum[series.valueKey ?? "value"]))
+    );
     const radius = Math.min(ctx.plotWidth, ctx.plotHeight) / 2 - 24;
     const hoveredSegmentGrowBy = 8;
     const centerX = ctx.padding.left + ctx.plotWidth / 2;
@@ -2565,6 +2619,9 @@ var SpruceXCharts = (() => {
     }).join("");
   }
   function renderTreemap(data, config, ctx, series, runtime) {
+    data = data.filter(
+      (datum) => Number.isFinite(toNumber(datum[series.valueKey ?? "value"]))
+    );
     const labelKey = series.xKey ?? "label";
     const valueKey = series.valueKey ?? "value";
     return createTreemapRects(
@@ -2646,6 +2703,9 @@ var SpruceXCharts = (() => {
     return `${linkMarkup}${nodeMarkup}`;
   }
   function renderHeatmap(data, config, ctx, series, runtime) {
+    data = data.filter(
+      (datum) => Number.isFinite(toNumber(datum[series.valueKey ?? "value"]))
+    );
     const xKey = series.xKey ?? "x";
     const yKey = series.yKey ?? "y";
     const valueKey = series.valueKey ?? "value";
@@ -2665,12 +2725,7 @@ var SpruceXCharts = (() => {
         y: y + cellHeight / 2,
         key: `${datum[xKey]}-${datum[yKey]}`,
         label: `${String(datum[xKey])} / ${String(datum[yKey])}`,
-        value: formatValue(
-          value,
-          config.axes?.y,
-          config.locale,
-          config.timeZone
-        ),
+        value: formatSeriesValue(value, series, config.axes?.y, config),
         raw: datum,
         series
       });
@@ -2689,6 +2744,9 @@ var SpruceXCharts = (() => {
     return `${cells}${xLabels}${yLabels}`;
   }
   function renderBoxPlot(data, config, ctx, series, runtime) {
+    data = data.filter(
+      (datum) => Number.isFinite(toNumber(datum[series.yKey ?? "value"]))
+    );
     const xKey = series.xKey ?? "group";
     const yKey = series.yKey ?? "value";
     const grouped = groupBy(data, (datum) => String(datum[xKey] ?? ""));
@@ -2724,7 +2782,7 @@ var SpruceXCharts = (() => {
         y: yMedian,
         key: group,
         label: group,
-        value: `Median ${formatValue(median, config.axes?.y, config.locale, config.timeZone)}`,
+        value: `Median ${formatSeriesValue(median, series, config.axes?.y, config)}`,
         raw: { group, q1, median, q3, low, high },
         series
       });
@@ -2777,14 +2835,14 @@ var SpruceXCharts = (() => {
         featureCenters.set(key, center);
       }
       const isHovered = String(runtime.state.hoveredKey ?? "") === id;
-      const fillColor = mapValueColor(value, ctx.theme, series);
+      const fillColor = Number.isFinite(value) ? mapValueColor(value, ctx.theme, series) : ctx.theme.muted;
       const fillOpacity = value > 0 ? max ? Math.max(isHovered ? 0.42 : 0.18, value / max) : isHovered ? 0.42 : 0.18 : 1;
       ctx.interactivePoints.push({
         x: center.x,
         y: center.y,
         key: id,
         label: String(feature2.properties?.name ?? id),
-        value: formatSeriesValue(value, series, config.axes?.y, config),
+        value: Number.isFinite(value) ? formatSeriesValue(value, series, config.axes?.y, config) : "No data",
         raw: datum,
         series,
         color: fillColor
@@ -2851,7 +2909,10 @@ var SpruceXCharts = (() => {
     const xAxis = config.axes?.x;
     const yAxis = config.axes?.y;
     const yAxis2 = config.axes?.y2;
-    const xScaleType = resolveScaleType(xAxis, collectXValues(data, visibleSeries));
+    const xScaleType = resolveScaleType(
+      xAxis,
+      collectXValues(data, visibleSeries)
+    );
     const isHorizontalBarChart = type === "horizontal-bar";
     const usesBucketedTimeBars = xScaleType === "time" && (type === "bar" || type === "stacked-bar");
     const temporalBarData = usesBucketedTimeBars ? normalizeTemporalBarData(data, visibleSeries) : void 0;
@@ -2981,21 +3042,26 @@ var SpruceXCharts = (() => {
       const bucketDomain = temporalBarData.bucketDates.map(
         (bucket) => new Date(bucket).toISOString()
       );
-      const bucketDates = temporalBarData.bucketDates.map((bucket) => new Date(bucket));
-      categoryScale = createBandScale(bucketDomain, plotX, plotX + plotWidth, 0.12);
+      const bucketDates = temporalBarData.bucketDates.map(
+        (bucket) => new Date(bucket)
+      );
+      categoryScale = createBandScale(
+        bucketDomain,
+        plotX,
+        plotX + plotWidth,
+        0.12
+      );
       xToCoord = (value) => {
         const left = categoryScale.scale(
           bucketKeyForTemporalValue(value, temporalBarData.unit)
         );
         return (left ?? plotX) + categoryScale.bandwidth() / 2;
       };
-      xToStart = (value) => categoryScale.scale(bucketKeyForTemporalValue(value, temporalBarData.unit)) ?? plotX;
+      xToStart = (value) => categoryScale.scale(
+        bucketKeyForTemporalValue(value, temporalBarData.unit)
+      ) ?? plotX;
       coordToX = (coord) => coord - plotX;
-      xTicks = resolveTickValues(
-        xAxis,
-        bucketDates,
-        axisTickCount(xAxis, 6)
-      );
+      xTicks = resolveTickValues(xAxis, bucketDates, axisTickCount(xAxis, 6));
       yTicks = usesDiscreteCountAxis ? buildIntegerTicks(yMin, yMax, axisTickCount(yAxis, 5)) : resolveTickValues(
         yAxis,
         yScale.ticks(axisTickCount(yAxis, 5)),
@@ -3195,6 +3261,9 @@ var SpruceXCharts = (() => {
       );
       if (type === "stacked-area") {
         stacked.forEach((layer, layerIndex) => {
+          layer = layer.filter(
+            ([, , datum, key]) => Number.isFinite(toNumber(datum[key]))
+          );
           const series = visibleSeries[layerIndex];
           const lineMode = series.lineMode ?? "smooth";
           const keyForDatum = (datum, pointIndex) => xScaleType === "time" ? toDateMs(datum[series.xKey ?? visibleSeries[0].xKey ?? "x"]) : String(
@@ -3217,11 +3286,11 @@ var SpruceXCharts = (() => {
                     datum[series.xKey ?? visibleSeries[0].xKey ?? "x"]
                   ),
                   yToCoord(end) - 10,
-                  formatValue(
+                  formatSeriesValue(
                     datum[series.yKey ?? series.valueKey ?? "value"],
+                    series,
                     config.axes?.y,
-                    config.locale,
-                    config.timeZone
+                    config
                   ),
                   {
                     fill: ctx.theme.foreground,
@@ -3395,20 +3464,29 @@ var SpruceXCharts = (() => {
         if (effectiveType === "line" || effectiveType === "area" || effectiveType === "multi-axis") {
           const lineMode = series.lineMode ?? (effectiveType === "line" || effectiveType === "area" ? "smooth" : "straight");
           const markerSize = series.markerSize ?? (effectiveType === "line" || effectiveType === "area" ? 0 : 3);
-          const points = decimate(
-            pointsForLine(data, series, xToCoord, targetY),
-            1500
+          const batches = [[]];
+          data.forEach((datum) => {
+            if (series.missingValues === "gap" && (!Number.isFinite(
+              toNumber(datum[series.yKey ?? series.valueKey ?? "y"])
+            ) || datum[series.xKey ?? "x"] == null)) {
+              if (batches[batches.length - 1].length) batches.push([]);
+            } else batches[batches.length - 1].push(datum);
+          });
+          const segments = batches.map(
+            (batch) => decimate(pointsForLine(batch, series, xToCoord, targetY), 1500)
           );
-          const linePointsOnly = points.map((entry) => entry.point);
+          const points = segments.flat();
           const seriesLayers = [];
-          if (effectiveType === "area") {
+          segments.filter((segment) => segment.length).forEach((segment) => {
+            const linePointsOnly = segment.map((entry) => entry.point);
+            if (effectiveType === "area")
+              seriesLayers.push(
+                `<path d="${areaPath(linePointsOnly, plotY + plotHeight, lineMode)}" fill="${series.color}" fill-opacity="${series.areaOpacity ?? 0.22}" />`
+              );
             seriesLayers.push(
-              `<path d="${areaPath(linePointsOnly, plotY + plotHeight, lineMode)}" fill="${series.color}" fill-opacity="${series.areaOpacity ?? 0.22}" />`
+              `<path d="${linePath(linePointsOnly, lineMode)}" fill="none" stroke="${series.color}" stroke-width="${series.strokeWidth ?? 2.5}" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="${series.dashStyle ?? ""}" />`
             );
-          }
-          seriesLayers.push(
-            `<path d="${linePath(linePointsOnly, lineMode)}" fill="none" stroke="${series.color}" stroke-width="${series.strokeWidth ?? 2.5}" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="${series.dashStyle ?? ""}" />`
-          );
+          });
           points.forEach((entry) => {
             if (markerSize > 0) {
               seriesLayers.push(
@@ -3483,6 +3561,7 @@ var SpruceXCharts = (() => {
             const slot = slotLayout[pointIndex];
             const xValue = datum[series.xKey ?? "x"];
             const yValue = toNumber(datum[series.yKey ?? series.valueKey ?? "y"]);
+            if (!Number.isFinite(yValue)) return;
             const availableWidth = slot?.width ?? bandWidth;
             const slotWidth = availableWidth / groupCount;
             const segmentWidth = resolveVerticalBarWidth(
@@ -3586,6 +3665,8 @@ var SpruceXCharts = (() => {
           decimate(data, 2e3).forEach((datum, pointIndex) => {
             const xValue = datum[series.xKey ?? "x"];
             const yValue = toNumber(datum[series.yKey ?? "y"]);
+            if (!Number.isFinite(yValue) || !Number.isFinite(toNumber(datum[series.xKey ?? "x"])))
+              return;
             const radius = effectiveType === "bubble" ? Math.max(
               4,
               Math.min(24, toNumber(datum[series.sizeKey ?? "size"]) || 6)
@@ -3611,12 +3692,7 @@ var SpruceXCharts = (() => {
                 config.locale,
                 config.timeZone
               )}`,
-              value: formatValue(
-                yValue,
-                config.axes?.y,
-                config.locale,
-                config.timeZone
-              ),
+              value: formatSeriesValue(yValue, series, config.axes?.y, config),
               raw: datum,
               series
             });
@@ -3642,6 +3718,7 @@ var SpruceXCharts = (() => {
             const high = toNumber(datum[series.highKey ?? "high"]);
             const low = toNumber(datum[series.lowKey ?? "low"]);
             const close = toNumber(datum[series.closeKey ?? "close"]);
+            if (![open, high, low, close].every(Number.isFinite)) return;
             const bullish = close >= open;
             const color = bullish ? "var(--primary)" : "var(--destructive)";
             const yHigh = yToCoord(high);
@@ -3707,6 +3784,10 @@ var SpruceXCharts = (() => {
         )
       ) || 1;
       overlay.forEach((datum, index) => {
+        if (!Number.isFinite(
+          toNumber(datum[config.volumeOverlay?.yKey ?? "volume"])
+        ))
+          return;
         const slot = overlaySlotLayout[index];
         const x = slot?.center ?? xToCoord(
           datum[config.volumeOverlay?.xKey ?? visibleSeries[0]?.xKey ?? "x"]
@@ -3773,7 +3854,10 @@ var SpruceXCharts = (() => {
     const yAxisEnabled = isAxisEnabled(yAxis);
     const y2AxisEnabled = isAxisEnabled(yAxis2);
     const isHorizontalBarChart = type === "horizontal-bar";
-    const xScaleType = resolveScaleType(xAxis, collectXValues(data, visibleSeries));
+    const xScaleType = resolveScaleType(
+      xAxis,
+      collectXValues(data, visibleSeries)
+    );
     let stackedMax = 0;
     if (type === "stacked-bar" || type === "stacked-area") {
       data.forEach((datum) => {
@@ -3876,9 +3960,79 @@ var SpruceXCharts = (() => {
     }
     return { left, right };
   }
+  function truncateLabel(label, width, fontSize) {
+    if (approximateTextWidth(label, fontSize) <= width) return label;
+    let text = label;
+    while (text.length && approximateTextWidth(text + "\u2026", fontSize) > width)
+      text = text.slice(0, -1);
+    return text + "\u2026";
+  }
+  function applyLabelLayout(svg, config) {
+    const truncate = (node, limit) => {
+      if (!limit || limit <= 0) return;
+      const full = node.textContent ?? "";
+      const measure = () => node.getComputedTextLength?.() || approximateTextWidth(
+        node.textContent ?? "",
+        Number(node.getAttribute("font-size") ?? 11)
+      );
+      let text = full;
+      while (text.length && measure() > limit) {
+        text = text.slice(0, -1);
+        node.textContent = text + "\u2026";
+      }
+      if (text !== full) {
+        const title = document.createElementNS(SVG_NS, "title");
+        title.textContent = full;
+        node.appendChild(title);
+      }
+    };
+    svg.querySelectorAll(".sx-legend-item text").forEach(
+      (node) => truncate(
+        node,
+        config.legend?.maxLabelWidth ?? (config.legend?.compact ? 120 : void 0)
+      )
+    );
+    if (config.labelDensity === "auto") {
+      const occupied = [];
+      svg.querySelectorAll("[data-sx-data-label]").forEach((node) => {
+        const box = node.getBoundingClientRect();
+        if (!box.width || !box.height) return;
+        if (occupied.some(
+          (other) => box.left < other.right + 4 && box.right > other.left - 4 && box.top < other.bottom + 4 && box.bottom > other.top - 4
+        ))
+          node.setAttribute("visibility", "hidden");
+        else occupied.push(box);
+      });
+    }
+    for (const name of ["x", "y", "y2"]) {
+      const axis = config.axes?.[config.type === "horizontal-bar" ? name === "x" ? "y" : "x" : name];
+      let previous;
+      svg.querySelectorAll(`.sx-axis-${name} g text`).forEach((node) => {
+        truncate(node, axis?.maxLabelWidth);
+        if (axis?.labelDensity !== "auto") return;
+        const box = node.getBoundingClientRect();
+        if (!box.width || !box.height) return;
+        if (previous && box.left < previous.right + 6 && box.right > previous.left - 6 && box.top < previous.bottom + 4 && box.bottom > previous.top - 4)
+          node.setAttribute("visibility", "hidden");
+        else previous = box;
+      });
+    }
+  }
   function renderChart(runtime) {
     runtime.animationCursor = 0;
-    const config = runtime.config;
+    const source = runtime.config;
+    const config = { ...source, axes: { ...source.axes } };
+    for (const axisName of ["x", "y", "y2"]) {
+      const fields = (source.series ?? []).filter((series) => axisName === "x" || (series.axis ?? "y") === axisName).map(
+        (series) => axisName === "x" ? series.xKey ?? "x" : series.yKey ?? series.valueKey ?? "y"
+      );
+      const formats = fields.map((field) => source.fieldFormats?.[field]);
+      if (formats.length && formats[0] && formats.every((format) => sameConfig(format, formats[0])))
+        config.axes[axisName] = {
+          format: formats[0],
+          ...source.axes?.[axisName]
+        };
+    }
     const data = asArray(config.data);
     const theme = resolveTheme(config);
     const padding = resolvePadding(config);
@@ -4025,6 +4179,7 @@ var SpruceXCharts = (() => {
     <g class="sx-axes">${ctx.axesMarkup ?? ""}</g>
     <g class="sx-crosshair"${clipPathAttribute}>${ctx.crosshairMarkup}</g>
   `;
+    applyLabelLayout(runtime.svg, config);
     runtime.context = ctx;
     runtime.tooltip.style.background = theme.tooltipBackground ?? "var(--popover)";
     runtime.tooltip.style.color = theme.tooltipForeground ?? "var(--popover-foreground)";
@@ -4115,12 +4270,23 @@ var SpruceXCharts = (() => {
     return nearestPoint(runtime.context, x, y) ?? (hoverKey ? tooltipPointsForKey(runtime.context, hoverKey)[0] : void 0);
   }
   function notifyConfigChange(runtime) {
-    runtime.container.dispatchEvent(new CustomEvent("sx-chart:configchange", {
-      bubbles: true,
-      detail: { config: configurationOf(runtime.config) }
-    }));
+    runtime.container.dispatchEvent(
+      new CustomEvent("sx-chart:configchange", {
+        bubbles: true,
+        detail: { config: configurationOf(runtime.config) }
+      })
+    );
   }
   function attachInteractions(runtime) {
+    const emitRange = (source) => {
+      if (runtime.state.zoomX)
+        runtime.container.dispatchEvent(
+          new CustomEvent("sx-chart:range", {
+            bubbles: true,
+            detail: { source, range: [...runtime.state.zoomX] }
+          })
+        );
+    };
     const onClick = (event) => {
       const target = event.target;
       const legendPageControl = target.closest(
@@ -4146,14 +4312,24 @@ var SpruceXCharts = (() => {
         notifyConfigChange(runtime);
         return;
       }
-      if (!runtime.config.interactions?.drilldown || !runtime.context) return;
+      if (!runtime.context) return;
       const svgBounds = runtime.svg.getBoundingClientRect();
       const pointerEvent = event;
       const x = ((pointerEvent.clientX ?? 0) - svgBounds.left) / Math.max(1, svgBounds.width) * runtime.context.width;
       const y = ((pointerEvent.clientY ?? 0) - svgBounds.top) / Math.max(1, svgBounds.height) * runtime.context.height;
       const point = resolveInteractivePoint(runtime, target, x, y);
       if (point) {
-        runtime.config.interactions.drilldown(point.raw);
+        runtime.container.dispatchEvent(
+          new CustomEvent("sx-chart:selection", {
+            bubbles: true,
+            detail: {
+              key: point.key,
+              seriesId: point.series.id,
+              datum: cloneConfig(point.raw)
+            }
+          })
+        );
+        runtime.config.interactions?.drilldown?.(point.raw);
       }
     };
     let isPanning = false;
@@ -4291,6 +4467,7 @@ var SpruceXCharts = (() => {
         center + nextSpan * (1 - ratio)
       ];
       renderChart(runtime);
+      emitRange("zoom");
     };
     const onPointerDown = (event) => {
       if (runtime.config.interactions?.brush && runtime.context?.cartesian?.zoomable && (event.shiftKey || !runtime.config.interactions?.pan)) {
@@ -4324,15 +4501,23 @@ var SpruceXCharts = (() => {
             runtime.context.cartesian.coordToX(Math.min(start, end)),
             runtime.context.cartesian.coordToX(Math.max(start, end))
           ];
+          emitRange("brush");
         }
         renderChart(runtime);
       }
+      if (isPanning) emitRange("pan");
       isPanning = false;
     };
     const onDoubleClick = () => {
       if (runtime.config.interactions?.resetZoom === false) return;
       runtime.state.zoomX = void 0;
       renderChart(runtime);
+      runtime.container.dispatchEvent(
+        new CustomEvent("sx-chart:reset", {
+          bubbles: true,
+          detail: { source: "double-click" }
+        })
+      );
     };
     runtime.container.addEventListener("click", onClick);
     runtime.container.addEventListener("pointermove", onPointerMove);
@@ -4363,22 +4548,48 @@ var SpruceXCharts = (() => {
       () => runtime.container.removeEventListener("dblclick", onDoubleClick)
     );
   }
-  async function exportChart(runtime, format) {
+  async function exportChart(runtime, format, options) {
     const baseName = String(runtime.config.title ?? "sprucex-chart").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "sprucex-chart";
     if (format === "svg") {
       const content = new XMLSerializer().serializeToString(runtime.svg);
       return { content, mimeType: "image/svg+xml", fileName: `${baseName}.svg` };
     }
-    if (format === "csv") {
-      const rows = runtime.context?.csvRows ?? [];
-      const keys = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
-      const lines = [keys.join(",")].concat(
-        rows.map(
-          (row) => keys.map((key) => JSON.stringify(row[key] ?? "")).join(",")
+    if (format === "csv" || format === "json") {
+      const rows = asArray(runtime.config.data).map(
+        (row) => Object.fromEntries(
+          Object.entries(row).map(([key, value]) => {
+            if (options?.values !== "formatted" || value == null)
+              return [key, value];
+            const series = runtime.config.series?.find(
+              (series2) => seriesValueKey(series2, runtime.config) === key
+            );
+            const axis = runtime.config.axes?.[series?.axis === "y2" ? "y2" : series ? "y" : "x"];
+            const field = runtime.config.fieldFormats?.[key];
+            return [
+              key,
+              series ? formatSeriesValue(value, series, axis, runtime.config) : field ? formatDisplay(
+                value,
+                field,
+                runtime.config.locale ?? "en-US",
+                runtime.config.timeZone
+              ) : value
+            ];
+          })
         )
       );
+      if (format === "json")
+        return {
+          content: JSON.stringify(rows),
+          mimeType: "application/json",
+          fileName: `${baseName}.json`
+        };
+      const keys = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
+      const cell = (value) => `"${(value != null && typeof value === "object" ? JSON.stringify(value) : String(value ?? "")).replaceAll('"', '""')}"`;
       return {
-        content: lines.join("\n"),
+        content: [
+          keys.map(cell).join(","),
+          ...rows.map((row) => keys.map((key) => cell(row[key])).join(","))
+        ].join("\n"),
         mimeType: "text/csv",
         fileName: `${baseName}.csv`
       };
@@ -4477,7 +4688,8 @@ var SpruceXCharts = (() => {
       runtime.state.hiddenSeries = new Set(runtime.config.hiddenSeries ?? []);
       runtime.animateOnNextRender = runtime.config.animate !== false;
       renderChart(runtime);
-      if (!sameConfig(previous, configurationOf(runtime.config))) notifyConfigChange(runtime);
+      if (!sameConfig(previous, configurationOf(runtime.config)))
+        notifyConfigChange(runtime);
     }
     const instance = {
       getConfig() {
@@ -4498,8 +4710,8 @@ var SpruceXCharts = (() => {
         runtime.animateOnNextRender = false;
         renderChart(runtime);
       },
-      async export(format) {
-        const result = await exportChart(runtime, format);
+      async export(format, options) {
+        const result = await exportChart(runtime, format, options);
         download(result.content, result.fileName, result.mimeType);
         return result;
       },

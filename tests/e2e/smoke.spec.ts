@@ -24,7 +24,7 @@ test("bar examples render bucketed daily bars for dense and sparse series", asyn
   const denseBars = charts.nth(0).locator(".sx-plot rect[data-sx-chart-key]");
   const sparseBars = charts.nth(1).locator(".sx-plot rect[data-sx-chart-key]");
   await expect(denseBars).toHaveCount(58);
-  await expect(sparseBars).toHaveCount(19);
+  await expect(sparseBars).toHaveCount(6);
 
   const sparseYAxisLabels = await charts
     .nth(1)
