@@ -12,7 +12,7 @@
     "lint": "npm run build --workspace=sprucex-charts && npm run prepare:vendor && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "sprucex-charts": "0.2.0",
+    "sprucex-charts": "0.3.0",
     "@tailwindcss/vite": "^4.2.2",
     "basecoat-css": "^0.3.11",
     "sprucex": "^1.0.0",
