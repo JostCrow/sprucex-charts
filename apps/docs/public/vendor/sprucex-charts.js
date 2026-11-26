@@ -4741,28 +4741,126 @@ var SpruceXCharts = (() => {
 
   // src/integration/sprucex.ts
   var bindingsByComponent = /* @__PURE__ */ new WeakMap();
-  function evaluateConfig(component, binding) {
-    const data = component.evaluateExpressionOrLiteral(binding.dataExpr);
-    const explicitType = binding.typeExpr ? component.evaluateExpressionOrLiteral(binding.typeExpr) : void 0;
-    const rawConfig = binding.configExpr ? component.evaluateExpressionOrLiteral(
-      binding.configExpr
-    ) : void 0;
-    const rawOptions = binding.configExpr ? rawConfig : binding.optionsExpr ? component.evaluateExpressionOrLiteral(binding.optionsExpr) : {};
+  function unwrapRaw(value, toRaw) {
+    return typeof toRaw === "function" ? toRaw(value) : value;
+  }
+  function normalizeData(value) {
+    return Array.isArray(value) || typeof value === "object" && value !== null ? value : [];
+  }
+  function trackReactiveData(value, toRaw, seen = /* @__PURE__ */ new WeakSet()) {
+    if (typeof toRaw !== "function" || !value || typeof value !== "object") {
+      return;
+    }
+    const raw = toRaw(value);
+    if (raw === value) {
+      return;
+    }
+    if (seen.has(raw)) {
+      return;
+    }
+    seen.add(raw);
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        trackReactiveData(item, toRaw, seen);
+      }
+      return;
+    }
+    for (const key of Object.keys(value)) {
+      trackReactiveData(value[key], toRaw, seen);
+    }
+  }
+  function evaluateChartConfiguration(evaluateOrLiteral, attrs) {
+    const explicitType = attrs.typeExpr ? evaluateOrLiteral(attrs.typeExpr) : void 0;
+    const rawConfig = attrs.configExpr ? evaluateOrLiteral(attrs.configExpr) : void 0;
+    const rawOptions = attrs.configExpr ? rawConfig : attrs.optionsExpr ? evaluateOrLiteral(attrs.optionsExpr) : {};
+    const clonedOptions = typeof rawOptions === "object" && rawOptions ? cloneConfig(rawOptions) : {};
     const {
-      type: _ignoredType,
+      type: configType,
       data: _ignoredData,
       ...options
-    } = typeof rawOptions === "object" && rawOptions ? rawOptions : {};
+    } = clonedOptions;
     return {
       ...options,
-      data: Array.isArray(data) || typeof data === "object" && data ? data : [],
-      type: explicitType ?? rawConfig?.type ?? "line"
+      type: explicitType ?? (attrs.configExpr ? configType : void 0) ?? "line"
     };
   }
-  function registerSpruceXCharts(SpruceX) {
+  function destroyBinding(binding) {
+    binding.cleanup?.();
+    binding.cleanup = void 0;
+    binding.instance?.destroy();
+    binding.instance = void 0;
+    const runtime = getChartRuntime(binding.el);
+    runtime?.container.replaceChildren();
+  }
+  function registerChartDirective(SpruceX) {
+    SpruceX.directive?.("chart", (el, ctx) => {
+      if (!(el instanceof HTMLElement)) return;
+      const dataExpr = ctx.expression.trim();
+      if (!dataExpr) return;
+      const attrs = {
+        typeExpr: el.getAttribute("sx-chart-type") ?? void 0,
+        optionsExpr: el.getAttribute("sx-chart-options") ?? void 0,
+        configExpr: el.getAttribute("sx-chart-config") ?? void 0
+      };
+      let instance;
+      let currentData = [];
+      let configSnapshot;
+      const onChange = (event) => {
+        if (event.target !== el || !attrs.configExpr) return;
+        const { config } = event.detail;
+        configSnapshot = cloneConfig(config);
+        ctx.component.assignStateValue(attrs.configExpr, config);
+      };
+      el.addEventListener("sx-chart:configchange", onChange);
+      ctx.effect(() => {
+        const evaluated = ctx.evaluateOrLiteral(dataExpr);
+        trackReactiveData(evaluated, SpruceX.toRaw);
+        const nextData = normalizeData(unwrapRaw(evaluated, SpruceX.toRaw));
+        currentData = nextData;
+        if (instance) {
+          instance.setData(nextData);
+        }
+      });
+      ctx.effect(() => {
+        const nextConfig = evaluateChartConfiguration(
+          (expr) => ctx.evaluateOrLiteral(expr),
+          attrs
+        );
+        if (!instance) {
+          configSnapshot = cloneConfig(nextConfig);
+          instance = createChart(el, {
+            ...nextConfig,
+            data: currentData
+          });
+          return;
+        }
+        if (sameConfig(configSnapshot, nextConfig)) {
+          return;
+        }
+        configSnapshot = cloneConfig(nextConfig);
+        if (attrs.configExpr) {
+          instance.setConfig(nextConfig);
+          trackReactiveData(ctx.evaluateOrLiteral(attrs.configExpr), SpruceX.toRaw);
+        } else {
+          instance.update({ ...nextConfig, data: currentData });
+        }
+      });
+      ctx.cleanup(() => {
+        el.removeEventListener("sx-chart:configchange", onChange);
+        instance?.destroy();
+        instance = void 0;
+        const runtime = getChartRuntime(el);
+        runtime?.container.replaceChildren();
+      });
+    });
+  }
+  function registerChartIntegration(SpruceX) {
     SpruceX.integration("chart", {
+      preserveOnSwap: true,
       setup(component) {
-        bindingsByComponent.set(component, []);
+        if (!bindingsByComponent.has(component)) {
+          bindingsByComponent.set(component, []);
+        }
       },
       scan(component, el) {
         const dataExpr = el.getAttribute("sx-chart");
@@ -4785,12 +4883,7 @@ var SpruceXCharts = (() => {
           const onChange = (event) => {
             if (event.target !== el || !binding.configExpr) return;
             const { config } = event.detail;
-            binding.snapshot = cloneConfig({
-              ...config,
-              data: component.evaluateExpressionOrLiteral(
-                binding.dataExpr
-              )
-            });
+            binding.configSnapshot = cloneConfig(config);
             component.assignStateValue(binding.configExpr, config);
           };
           el.addEventListener("sx-chart:configchange", onChange);
@@ -4803,43 +4896,78 @@ var SpruceXCharts = (() => {
         const bindings = (bindingsByComponent.get(component) ?? []).filter(
           (binding) => {
             if (binding.el.isConnected) return true;
-            binding.cleanup?.();
-            binding.instance?.destroy();
+            destroyBinding(binding);
             return false;
           }
         );
         bindingsByComponent.set(component, bindings);
         bindings.forEach((binding) => {
-          const config = evaluateConfig(component, binding);
-          if (sameConfig(binding.snapshot, config)) return;
-          binding.snapshot = cloneConfig(config);
+          const evaluatedData = component.evaluateExpressionOrLiteral(
+            binding.dataExpr
+          );
+          const rawData = normalizeData(unwrapRaw(evaluatedData, SpruceX.toRaw));
+          const nextConfig = evaluateChartConfiguration(
+            (expr) => component.evaluateExpressionOrLiteral(expr),
+            binding
+          );
+          const isProxiedData = typeof SpruceX.toRaw === "function" && evaluatedData !== null && typeof evaluatedData === "object" && SpruceX.toRaw(evaluatedData) !== evaluatedData;
+          const configChanged = !sameConfig(binding.configSnapshot, nextConfig);
+          const dataChanged = !binding.instance ? true : isProxiedData || typeof SpruceX.toRaw !== "function" ? !sameConfig(binding.dataSnapshot, rawData) : binding.rawDataRef !== rawData;
+          if (!configChanged && !dataChanged) return;
+          binding.configSnapshot = cloneConfig(nextConfig);
+          binding.rawDataRef = rawData;
+          binding.dataSnapshot = isProxiedData || typeof SpruceX.toRaw !== "function" ? cloneConfig(rawData) : void 0;
           if (!binding.instance) {
-            binding.instance = createChart(binding.el, config);
+            binding.instance = createChart(binding.el, {
+              ...nextConfig,
+              data: rawData
+            });
             return;
           }
           if (binding.configExpr) {
-            binding.instance.setData(config.data ?? []);
-            binding.instance.setConfig(config);
+            if (dataChanged) {
+              binding.instance.setData(rawData);
+            }
+            if (configChanged) {
+              binding.instance.setConfig(nextConfig);
+            }
+          } else if (configChanged) {
+            binding.instance.update({ ...nextConfig, data: rawData });
           } else {
-            binding.instance.update(config);
+            binding.instance.setData(rawData);
           }
         });
       },
+      unmount(component, el) {
+        const bindings = bindingsByComponent.get(component);
+        if (!bindings) return;
+        const remaining = bindings.filter((binding) => {
+          if (binding.el !== el) return true;
+          destroyBinding(binding);
+          return false;
+        });
+        bindingsByComponent.set(component, remaining);
+      },
       teardown(component) {
         const bindings = bindingsByComponent.get(component) ?? [];
-        bindings.forEach((binding) => {
-          binding.cleanup?.();
-          binding.instance?.destroy();
-          const runtime = getChartRuntime(binding.el);
-          runtime?.container.replaceChildren();
-        });
+        bindings.forEach(destroyBinding);
         bindingsByComponent.delete(component);
       }
     });
   }
+  function registerSpruceXCharts(SpruceX) {
+    if (typeof SpruceX.directive === "function") {
+      registerChartDirective(SpruceX);
+      return;
+    }
+    registerChartIntegration(SpruceX);
+  }
   function autoRegisterSpruceXCharts() {
-    if (typeof window !== "undefined" && window.SpruceX) {
-      registerSpruceXCharts(window.SpruceX);
+    if (typeof window !== "undefined") {
+      const globalSpruceX = window.SpruceX;
+      if (globalSpruceX) {
+        registerSpruceXCharts(globalSpruceX);
+      }
     }
   }
 

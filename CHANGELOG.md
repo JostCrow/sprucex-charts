@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-11-26
+
+### Added
+
+- Registered `sx-chart` as an element-scoped custom directive via `SpruceX.directive("chart", ...)` on SpruceX 1.2+, with independent fine-grained `effect()` tracking for data and configuration so unrelated component state no longer re-renders charts and untouched charts survive partial HTML swaps.
+- Added `SpruceX.toRaw()` unwrapping and proxy-aware data tracking so large datasets wrapped with `SpruceX.markRaw()`, `SpruceX.shallow()`, or loaded with `sx-json-into.shallow` render without deep Proxy overhead while still updating on changes.
+- Extended `SpruceXLike` TypeScript definitions for SpruceX 1.2 directives, `toRaw`, `markRaw`, `shallow`, and integration `preserveOnSwap`/`unmount` hooks.
+- Added `preserveOnSwap: true` and element-level `unmount` support to the `SpruceX.integration("chart", ...)` fallback for older SpruceX runtimes.
+- Upgraded the docs site to SpruceX 1.2.0, including automatic vendoring of `sprucex.js`, a persisted cross-tab `theme` store, `sx-boost` sidebar prefetching, `$dispatch` event handlers, and SpruceX-driven settings search (`sx-model`, `sx-effect`, `sx-show`, and `.esc` clearing).
+
+### Fixed
+
+- Removed the conflicting global `Window.SpruceX` declaration in `sprucex-charts` so strict TypeScript projects using both `sprucex` 1.2+ and `sprucex-charts` compile without declaration modifier conflicts.
+
 ## [0.3.0] - 2026-11-09
 
 ### Added

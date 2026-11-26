@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "prepare:vendor": "mkdir -p public/vendor/basecoat && cp ../../packages/sprucex-charts/dist/sprucex-charts.js public/vendor/sprucex-charts.js && cp ../../node_modules/basecoat-css/dist/js/basecoat.min.js public/vendor/basecoat/basecoat.min.js && cp ../../node_modules/basecoat-css/dist/js/sidebar.min.js public/vendor/basecoat/sidebar.min.js",
+    "prepare:vendor": "mkdir -p public/vendor/basecoat && cp ../../node_modules/sprucex/public/dist/sprucex.js public/vendor/sprucex.js && cp ../../packages/sprucex-charts/dist/sprucex-charts.js public/vendor/sprucex-charts.js && cp ../../node_modules/basecoat-css/dist/js/basecoat.min.js public/vendor/basecoat/basecoat.min.js && cp ../../node_modules/basecoat-css/dist/js/sidebar.min.js public/vendor/basecoat/sidebar.min.js",
     "dev": "npm run prepare:vendor && astro dev",
     "build": "npm run prepare:vendor && astro build",
     "preview": "npm run prepare:vendor && astro preview",
@@ -12,12 +12,12 @@
     "lint": "npm run build --workspace=sprucex-charts && npm run prepare:vendor && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "sprucex-charts": "0.3.0",
+    "@tailwindcss/cli": "^4.1.18",
     "@tailwindcss/vite": "^4.2.2",
     "basecoat-css": "^0.3.11",
-    "sprucex": "^1.0.0",
-    "tailwindcss": "^4.2.2",
-    "@tailwindcss/cli": "^4.1.18"
+    "sprucex": "^1.2.0",
+    "sprucex-charts": "0.4.0",
+    "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
     "astro": "^5.18.1"

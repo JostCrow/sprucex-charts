@@ -2885,7 +2885,12 @@ import ConfigurableChartExample from "../ConfigurableChartExample.astro";
             </tr>
           </tbody>
         </table>
-        <div id="no-results" class="hidden py-8 text-center text-muted-foreground">
+        <div
+          id="no-results"
+          sx-show="visibleCount === 0"
+          style="display: none"
+          class="py-8 text-center text-muted-foreground"
+        >
           No settings match your search.
         </div>
       </div>

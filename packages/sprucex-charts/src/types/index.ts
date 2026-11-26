@@ -306,13 +306,38 @@ export interface SpruceXComponentLike {
   assignStateValue(targetExpr: string, value: unknown): void;
 }
 
+export interface SpruceXDirectiveContextLike {
+  readonly el: Element;
+  readonly name: string;
+  readonly attr: string;
+  readonly expression: string;
+  readonly expr: string;
+  readonly modifiers: string[];
+  readonly component: SpruceXComponentLike;
+  evaluate(expression?: string): unknown;
+  evaluateOrLiteral(expression?: string): unknown;
+  effect(fn: () => void): () => void;
+  cleanup(fn: () => void): void;
+}
+
+export type SpruceXDirectiveHandlerLike = (
+  el: Element,
+  context: SpruceXDirectiveContextLike,
+) => void | (() => void);
+
 export interface SpruceXLike {
+  directive?(name: string, handler: SpruceXDirectiveHandlerLike): unknown;
+  toRaw?<T>(value: T): T;
+  markRaw?<T>(value: T): T;
+  shallow?<T>(value: T): T;
   integration(
     name: string,
     integration: {
+      preserveOnSwap?: boolean;
       setup?: (component: SpruceXComponentLike) => void;
       scan?: (component: SpruceXComponentLike, el: HTMLElement) => void;
       update?: (component: SpruceXComponentLike) => void;
+      unmount?: (component: SpruceXComponentLike, el: HTMLElement) => void;
       teardown?: (component: SpruceXComponentLike) => void;
     },
   ): void;

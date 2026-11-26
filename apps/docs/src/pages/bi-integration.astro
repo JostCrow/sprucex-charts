@@ -54,8 +54,9 @@ const range: ChartRangeEvent = {
     <section class="space-y-3">
       <h2 class="text-xl font-semibold">A persistable card configuration</h2>
       <pre class="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{config}</code></pre>
-      <p>Register a SpruceX component named biCard with rows, presentation (the configuration above), selection, and range state. Bind it using the existing chart integration:</p>
+      <p>Register a SpruceX component named biCard with rows, presentation (the configuration above), selection, and range state. Bind it using the existing chart directive:</p>
       <pre class="overflow-x-auto rounded-lg border bg-muted p-4 text-sm"><code>{binding}</code></pre>
+      <p>On SpruceX 1.2+, <code>sx-chart</code> registers as an element-scoped custom directive with fine-grained reactive tracking: unrelated state changes do not re-render charts, untouched charts survive partial HTML swaps, and large row arrays wrapped with <code>SpruceX.markRaw()</code>, <code>SpruceX.shallow()</code>, or loaded via <code>sx-json-into.shallow</code> bypass deep proxy wrapping while still updating when replaced. Own read-only getters on <code>sx-data</code> are auto-memoized for derived datasets.</p>
       <p>sx-chart-config writes configuration changes such as legend visibility back to presentation. Save that object separately from rows. getConfig returns a detached snapshot excluding top-level data; setConfig replaces configuration while retaining rows. update keeps its existing shallow merge behavior.</p>
       <p>Use declarative formats and ISO date strings for JSON storage. Functions (series format, tickFormat, tooltip formatter/conditional, legend labelFormatter, drilldown, donut formatter) are runtime-only and must be reattached after loading. Existing embedded data such as volumeOverlay.data, Sankey nodes/links, and custom map geometry remain part of the snapshot: externalize those explicitly if your persistence policy excludes datasets. JSON-safe does not mean every possible ChartConfiguration is JSON-serializable.</p>
     </section>

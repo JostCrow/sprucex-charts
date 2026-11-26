@@ -21,10 +21,16 @@ import '../styles.css';
     <title>{page.browserTitle}</title>
     <script is:inline>
       (() => {
-        const key = "darkMode";
         try {
-          const saved = JSON.parse(localStorage.getItem(key) || "{}");
-          if (saved.darkMode) {
+          const themeStore = JSON.parse(
+            localStorage.getItem("sprucex-store-theme") || "{}",
+          );
+          const legacy = JSON.parse(localStorage.getItem("darkMode") || "{}");
+          const isDark =
+            typeof themeStore.dark === "boolean"
+              ? themeStore.dark
+              : Boolean(legacy.darkMode);
+          if (isDark) {
             document.documentElement.classList.add("dark");
           }
         } catch {
@@ -49,7 +55,7 @@ import '../styles.css';
           class="btn-outline w-fit"
           aria-controls="docs-sidebar"
           aria-label="Toggle navigation"
-          onclick="document.dispatchEvent(new CustomEvent('basecoat:sidebar', { detail: { id: 'docs-sidebar' } }))"
+          sx-on:click="$dispatch('basecoat:sidebar', { id: 'docs-sidebar' })"
         >
           Navigation
         </button>
@@ -59,34 +65,68 @@ import '../styles.css';
     </div>
     <script is:inline>
       (() => {
-        const key = "darkMode";
-        const root = document.documentElement;
-        const reinitSidebar = () => {
-          if (window.basecoat && typeof window.basecoat.init === "function") {
-            window.basecoat.init("sidebar");
-          }
-        };
-        const bindSidebarLifecycle = () => {
-          if (window.__docsSidebarLifecycleBound) return;
-          window.__docsSidebarLifecycleBound = true;
+        const bootDocsSpruceX = () => {
+          if (window.__docsSpruceXBooted || !window.SpruceX) return;
+          window.__docsSpruceXBooted = true;
+
+          const root = document.documentElement;
+          const theme = window.SpruceX.store(
+            "theme",
+            { dark: root.classList.contains("dark") },
+            { persist: true, syncTabs: true },
+          );
+
+          window.SpruceX.effect(() => {
+            root.classList.toggle("dark", Boolean(theme.dark));
+          });
+
+          window.SpruceX.data("docsPage", () => ({
+            toggleTheme() {
+              theme.dark = !theme.dark;
+            },
+          }));
+
+          window.SpruceX.data("docsDocs", () => ({
+            searchQuery: "",
+            visibleCount: 1,
+            filterSettings(container) {
+              const query = String(this.searchQuery || "").trim().toLowerCase();
+              const scope = container || document;
+              const rows = scope.querySelectorAll("[data-setting-row]");
+              let count = 0;
+              rows.forEach((row) => {
+                const text = (row.textContent || "").toLowerCase();
+                const isVisible = !query || text.includes(query);
+                row.style.display = isVisible ? "" : "none";
+                if (isVisible) count += 1;
+              });
+              this.visibleCount = count;
+            },
+          }));
+
+          document.addEventListener("basecoat:theme", () => {
+            theme.dark = !theme.dark;
+          });
+
+          const reinitSidebar = () => {
+            if (window.basecoat && typeof window.basecoat.init === "function") {
+              window.basecoat.init("sidebar");
+            }
+          };
+
           document.addEventListener("sprucex:page-after", () => {
             queueMicrotask(reinitSidebar);
           });
+          window.addEventListener("load", reinitSidebar, { once: true });
         };
-        const persist = (isDark) => {
-          try {
-            localStorage.setItem(key, JSON.stringify({ darkMode: isDark }));
-          } catch {
-            // Ignore storage access errors.
-          }
-        };
-        document.addEventListener("basecoat:theme", () => {
-          const nextIsDark = !root.classList.contains("dark");
-          root.classList.toggle("dark", nextIsDark);
-          persist(nextIsDark);
-        });
-        bindSidebarLifecycle();
-        window.addEventListener("load", reinitSidebar, { once: true });
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", bootDocsSpruceX, {
+            once: true,
+          });
+        } else {
+          bootDocsSpruceX();
+        }
       })();
     </script>
   </body>

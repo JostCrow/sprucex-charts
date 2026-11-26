@@ -63,19 +63,7 @@ const actions = page.actions ?? [];
             placeholder="Search settings..."
             class="input w-full max-w-sm pl-10"
             sx-model="searchQuery"
-            oninput="
-              const query = this.value.toLowerCase();
-              const rows = document.querySelectorAll('[data-setting-row]');
-              let visibleCount = 0;
-              rows.forEach((row) => {
-                const text = row.innerText.toLowerCase();
-                const isVisible = !query || text.includes(query);
-                row.style.display = isVisible ? '' : 'none';
-                if (isVisible) visibleCount++;
-              });
-              const emptyMsg = document.getElementById('no-results');
-              if (emptyMsg) emptyMsg.style.display = visibleCount === 0 ? 'block' : 'none';
-            "
+            sx-on:keydown.esc="searchQuery = ''"
           />
         </div>
       </div>

@@ -130,3 +130,47 @@ test("mobile sidebar toggle still works after SpruceX page navigation", async ({
   await closeButton.click();
   await expect(sidebar).toHaveAttribute("aria-hidden", "true");
 });
+
+test("documentation settings search filters rows via SpruceX and clears on Escape", async ({
+  page,
+}) => {
+  await page.goto("/documentation", { waitUntil: "domcontentloaded" });
+
+  const searchInput = page.getByPlaceholder("Search settings...");
+  const rows = page.locator("[data-setting-row]");
+  const noResults = page.locator("#no-results");
+
+  const initialCount = await rows.count();
+  expect(initialCount).toBeGreaterThan(10);
+  await expect(noResults).toBeHidden();
+
+  await searchInput.fill("volumeOverlay");
+  await expect(rows.filter({ visible: true })).toHaveCount(5);
+  await expect(noResults).toBeHidden();
+
+  await searchInput.fill("definitely-not-a-real-setting-xyz");
+  await expect(rows.filter({ visible: true })).toHaveCount(0);
+  await expect(noResults).toBeVisible();
+
+  await searchInput.press("Escape");
+  await expect(searchInput).toHaveValue("");
+  await expect(noResults).toBeHidden();
+  await expect(rows.filter({ visible: true })).toHaveCount(initialCount);
+});
+
+test("dark mode toggle uses SpruceX persisted store", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  const toggleButton = page.getByRole("button", { name: "Toggle dark mode" });
+  const html = page.locator("html");
+
+  await expect(html).not.toHaveClass(/\bdark\b/);
+  await toggleButton.click();
+  await expect(html).toHaveClass(/\bdark\b/);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(html).toHaveClass(/\bdark\b/);
+
+  await toggleButton.click();
+  await expect(html).not.toHaveClass(/\bdark\b/);
+});

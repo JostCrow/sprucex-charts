@@ -57,7 +57,7 @@ export const docPages: readonly DocPage[] = [
     href: "/documentation",
     mainAttributes: {
       "sx-data": "docsDocs",
-      "sx-init": "searchQuery = ''",
+      "sx-effect": "filterSettings($el)",
     },
     navLabel: "Documentation",
     section: "documentation",
